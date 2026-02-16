@@ -1,6 +1,8 @@
 import type { DIDResolutionResult } from '../types'
 import { DIDError, ErrorCodes } from '../errors'
 import { resolveDidKey } from './methods/key'
+import { resolveDidWeb } from './methods/web'
+import { resolveDidEbsi } from './methods/ebsi'
 
 export async function resolveDID(did: string): Promise<DIDResolutionResult> {
   const parts = did.split(':')
@@ -18,9 +20,9 @@ export async function resolveDID(did: string): Promise<DIDResolutionResult> {
     case 'key':
       return resolveDidKey(did)
     case 'web':
-      throw new DIDError(ErrorCodes.DID_METHOD_UNSUPPORTED, 'did:web not yet implemented')
+      return resolveDidWeb(did)
     case 'ebsi':
-      throw new DIDError(ErrorCodes.DID_METHOD_UNSUPPORTED, 'did:ebsi not yet implemented')
+      return resolveDidEbsi(did)
     default:
       throw new DIDError(
         ErrorCodes.DID_METHOD_UNSUPPORTED,
