@@ -1,6 +1,6 @@
 // credat — AI-native TypeScript SDK for eIDAS 2.0 verifiable credentials
 
-export const VERSION = '0.1.0-alpha.0'
+export const VERSION = '0.1.0-alpha.1'
 
 // === Main Entry Point ===
 export { createClient } from './client'

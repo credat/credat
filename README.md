@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://credat.io">
-    <img alt="Credat" src="./logo.png" width="120" />
+    <img alt="Credat" src="https://raw.githubusercontent.com/credat/credat/develop/logo.png" width="120" />
   </a>
 </p>
 
