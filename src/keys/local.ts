@@ -3,7 +3,7 @@ import type { StorageAdapter } from '../storage'
 import type { KeyManager, StoredKey } from './types'
 import type { Algorithm } from '../crypto'
 import { generateKeyPair, sign as cryptoSign } from '../crypto'
-import { VeraceError, ErrorCodes } from '../errors'
+import { CredatError, ErrorCodes } from '../errors'
 
 interface StoredKeyInternal {
   id: string
@@ -55,7 +55,7 @@ export class LocalKeyManager implements KeyManager {
   async sign(keyId: string, payload: Uint8Array): Promise<Uint8Array> {
     const stored = await this.storage.get<StoredKeyInternal>(KEYS_COLLECTION, keyId)
     if (!stored) {
-      throw new VeraceError(ErrorCodes.DID_NOT_FOUND, `Key not found: ${keyId}`)
+      throw new CredatError(ErrorCodes.DID_NOT_FOUND, `Key not found: ${keyId}`)
     }
 
     const privateKey = hexToBytes(stored.privateKey)

@@ -149,7 +149,7 @@ export interface AIConfig {
   baseUrl?: string
 }
 
-export interface VeraceClient {
+export interface CredatClient {
   credentials: {
     issue: (request: IssuanceRequest) => Promise<IssuedCredential>
     verify: (request: VerificationRequest) => Promise<VerificationResult>

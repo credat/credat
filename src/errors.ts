@@ -1,30 +1,30 @@
-export class VeraceError extends Error {
+export class CredatError extends Error {
   public readonly code: string
   public readonly humanMessage?: string
 
   constructor(code: string, message: string, humanMessage?: string) {
     super(message)
-    this.name = 'VeraceError'
+    this.name = 'CredatError'
     this.code = code
     this.humanMessage = humanMessage
   }
 }
 
-export class CredentialError extends VeraceError {
+export class CredentialError extends CredatError {
   constructor(code: string, message: string, humanMessage?: string) {
     super(code, message, humanMessage)
     this.name = 'CredentialError'
   }
 }
 
-export class DIDError extends VeraceError {
+export class DIDError extends CredatError {
   constructor(code: string, message: string, humanMessage?: string) {
     super(code, message, humanMessage)
     this.name = 'DIDError'
   }
 }
 
-export class ProtocolError extends VeraceError {
+export class ProtocolError extends CredatError {
   constructor(code: string, message: string, humanMessage?: string) {
     super(code, message, humanMessage)
     this.name = 'ProtocolError'
@@ -53,4 +53,8 @@ export const ErrorCodes = {
   // Config errors
   MISSING_API_KEY: 'CONFIG_MISSING_API_KEY',
   INVALID_CONFIG: 'CONFIG_INVALID',
+
+  // AI errors
+  AI_REQUEST_FAILED: 'AI_REQUEST_FAILED',
+  AI_PARSE_FAILED: 'AI_PARSE_FAILED',
 } as const

@@ -1,5 +1,5 @@
 {
-  "name": "verace",
+  "name": "credat",
   "version": "0.1.0-alpha.0",
   "description": "AI-native TypeScript SDK for eIDAS 2.0 verifiable credentials",
   "type": "module",
