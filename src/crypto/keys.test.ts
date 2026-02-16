@@ -18,6 +18,13 @@ describe("generateKeyPair", () => {
 		expect(kp.publicKey.length).toBe(32);
 	});
 
+	it("generates ES256K (secp256k1) key pair", () => {
+		const kp = generateKeyPair("ES256K");
+		expect(kp.algorithm).toBe("ES256K");
+		expect(kp.privateKey.length).toBe(32);
+		expect(kp.publicKey.length).toBe(33); // compressed
+	});
+
 	it("generates unique keys each time", () => {
 		const kp1 = generateKeyPair("ES256");
 		const kp2 = generateKeyPair("ES256");
@@ -44,9 +51,26 @@ describe("publicKeyToJwk", () => {
 		expect(jwk.x).toBeDefined();
 	});
 
-	it("round-trips through JWK", () => {
+	it("converts secp256k1 public key to JWK", () => {
+		const kp = generateKeyPair("ES256K");
+		const jwk = publicKeyToJwk(kp.publicKey, "ES256K");
+		expect(jwk.kty).toBe("EC");
+		expect(jwk.crv).toBe("secp256k1");
+		expect(jwk.x).toBeDefined();
+		expect(jwk.y).toBeDefined();
+		expect(jwk.d).toBeUndefined();
+	});
+
+	it("round-trips P-256 through JWK", () => {
 		const kp = generateKeyPair("ES256");
 		const jwk = publicKeyToJwk(kp.publicKey, "ES256");
+		const restored = jwkToPublicKey(jwk);
+		expect(restored).toEqual(kp.publicKey);
+	});
+
+	it("round-trips secp256k1 through JWK", () => {
+		const kp = generateKeyPair("ES256K");
+		const jwk = publicKeyToJwk(kp.publicKey, "ES256K");
 		const restored = jwkToPublicKey(jwk);
 		expect(restored).toEqual(kp.publicKey);
 	});

@@ -57,4 +57,30 @@ describe("did:key", () => {
 		expect(result.didDocument).toBeNull();
 		expect(result.didResolutionMetadata.error).toBeDefined();
 	});
+
+	it("creates a did:key from secp256k1 public key", () => {
+		const kp = generateKeyPair("ES256K");
+		const did = createDidKey(kp.publicKey, "ES256K");
+		expect(did).toMatch(/^did:key:z/);
+	});
+
+	it("round-trips secp256k1: create → resolve → verify key matches", () => {
+		const kp = generateKeyPair("ES256K");
+		const did = createDidKey(kp.publicKey, "ES256K");
+		const result = resolveDidKey(did);
+		expect(result.didDocument).not.toBeNull();
+		expect(result.didDocument?.id).toBe(did);
+		const jwk = result.didDocument?.verificationMethod?.[0]?.publicKeyJwk;
+		expect(jwk?.crv).toBe("secp256k1");
+		expect(jwk?.x).toBeDefined();
+		expect(jwk?.y).toBeDefined();
+	});
+
+	it("includes capabilityInvocation and capabilityDelegation in resolved docs", () => {
+		const kp = generateKeyPair("ES256");
+		const did = createDidKey(kp.publicKey, "ES256");
+		const result = resolveDidKey(did);
+		expect(result.didDocument?.capabilityInvocation).toHaveLength(1);
+		expect(result.didDocument?.capabilityDelegation).toHaveLength(1);
+	});
 });

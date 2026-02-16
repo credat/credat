@@ -21,29 +21,39 @@ export function createDidWeb(domain: string, path?: string): string {
 }
 
 export async function resolveDidWeb(did: string): Promise<DIDResolutionResult> {
+	let response: Response;
 	try {
 		const url = didWebToUrl(did);
-		const response = await fetch(url);
-
-		if (!response.ok) {
-			return {
-				didDocument: null,
-				didResolutionMetadata: { error: "notFound" },
-				didDocumentMetadata: {},
-			};
-		}
-
-		const didDocument = (await response.json()) as DIDDocument;
+		response = await fetch(url);
+	} catch {
 		return {
-			didDocument,
-			didResolutionMetadata: {},
+			didDocument: null,
+			didResolutionMetadata: { error: "networkError" },
 			didDocumentMetadata: {},
 		};
-	} catch {
+	}
+
+	if (!response.ok) {
 		return {
 			didDocument: null,
 			didResolutionMetadata: { error: "notFound" },
 			didDocumentMetadata: {},
 		};
 	}
+
+	const didDocument = (await response.json()) as DIDDocument;
+
+	if (didDocument.id !== did) {
+		return {
+			didDocument: null,
+			didResolutionMetadata: { error: "invalidDid" },
+			didDocumentMetadata: {},
+		};
+	}
+
+	return {
+		didDocument,
+		didResolutionMetadata: {},
+		didDocumentMetadata: {},
+	};
 }

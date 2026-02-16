@@ -7,12 +7,21 @@ import type { DIDDocument, DIDResolutionResult } from "../../types";
 // Ed25519 (ed25519-pub): 0xed → varint [0xed, 0x01]
 const MULTICODEC_P256 = new Uint8Array([0x80, 0x24]);
 const MULTICODEC_ED25519 = new Uint8Array([0xed, 0x01]);
+const MULTICODEC_SECP256K1 = new Uint8Array([0xe7, 0x01]);
 
 export function createDidKey(
 	publicKey: Uint8Array,
 	algorithm: Algorithm,
 ): string {
-	const prefix = algorithm === "ES256" ? MULTICODEC_P256 : MULTICODEC_ED25519;
+	const prefixMap: Record<Algorithm, Uint8Array> = {
+		ES256: MULTICODEC_P256,
+		EdDSA: MULTICODEC_ED25519,
+		ES256K: MULTICODEC_SECP256K1,
+	};
+	const prefix = prefixMap[algorithm];
+	if (!prefix) {
+		throw new Error(`Unsupported algorithm for did:key: ${algorithm}`);
+	}
 	const multicodecKey = new Uint8Array(prefix.length + publicKey.length);
 	multicodecKey.set(prefix, 0);
 	multicodecKey.set(publicKey, prefix.length);
@@ -45,6 +54,9 @@ export function resolveDidKey(did: string): DIDResolutionResult {
 		} else if (multicodecKey[0] === 0xed && multicodecKey[1] === 0x01) {
 			algorithm = "EdDSA";
 			publicKey = multicodecKey.slice(2);
+		} else if (multicodecKey[0] === 0xe7 && multicodecKey[1] === 0x01) {
+			algorithm = "ES256K";
+			publicKey = multicodecKey.slice(2);
 		} else {
 			return {
 				didDocument: null,
@@ -68,6 +80,8 @@ export function resolveDidKey(did: string): DIDResolutionResult {
 			],
 			authentication: [keyId],
 			assertionMethod: [keyId],
+			capabilityInvocation: [keyId],
+			capabilityDelegation: [keyId],
 		};
 
 		return {

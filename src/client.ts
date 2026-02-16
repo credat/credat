@@ -14,8 +14,10 @@ import {
 	base64urlToUint8Array,
 	generateKeyPair,
 	jwkToPublicKey,
+	publicKeyToJwk,
 	uint8ArrayToBase64url,
 } from "./crypto/keys";
+import { createDidJwk } from "./did/methods/jwk";
 import { createDidKey } from "./did/methods/key";
 import { createDidWeb } from "./did/methods/web";
 import { resolveDID } from "./did/resolver";
@@ -351,6 +353,11 @@ function createDIDModule() {
 					const kp = generateKeyPair("ES256");
 					return createDidKey(kp.publicKey, "ES256");
 				}
+				case "jwk": {
+					const kp = generateKeyPair("ES256");
+					const jwk = publicKeyToJwk(kp.publicKey, "ES256");
+					return createDidJwk(jwk);
+				}
 				case "web": {
 					if (!options.domain) {
 						throw new CredatError(
@@ -364,7 +371,7 @@ function createDIDModule() {
 				default:
 					throw new CredatError(
 						ErrorCodes.INVALID_CONFIG,
-						`DID method "${options.method}" cannot be created locally. Supported: key, web.`,
+						`DID method "${options.method}" cannot be created locally. Supported: key, jwk, web.`,
 					);
 			}
 		},

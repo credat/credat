@@ -31,9 +31,11 @@ export type { Algorithm, KeyPair } from "./crypto";
 export { generateKeyPair, jwkToPublicKey, publicKeyToJwk } from "./crypto";
 // === DID (advanced) ===
 export {
+	createDidJwk,
 	createDidKey,
 	createDidWeb,
 	resolveDID,
+	resolveDidJwk,
 	resolveDidKey,
 	resolveDidWeb,
 } from "./did";
