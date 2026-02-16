@@ -1,12 +1,12 @@
-export { CredentialVerifier } from './verifier'
-export type { CredentialVerifierConfig } from './verifier'
 export type {
-  AuthorizationRequest,
-  AuthorizationResponse,
-  PresentationDefinition,
-  PresentationSubmission,
-  PresentationRequestParams,
-  VerifiedPresentation,
-  InputDescriptor,
-  FieldConstraint,
-} from './types'
+	AuthorizationRequest,
+	AuthorizationResponse,
+	FieldConstraint,
+	InputDescriptor,
+	PresentationDefinition,
+	PresentationRequestParams,
+	PresentationSubmission,
+	VerifiedPresentation,
+} from "./types";
+export type { CredentialVerifierConfig } from "./verifier";
+export { CredentialVerifier } from "./verifier";

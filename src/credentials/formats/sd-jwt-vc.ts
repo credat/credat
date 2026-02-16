@@ -1,225 +1,263 @@
-import { sha256 } from '@noble/hashes/sha2.js'
-import { randomBytes } from '@noble/hashes/utils.js'
-import { sign, verifySignature } from '../../crypto/sign'
-import { uint8ArrayToBase64url, base64urlToUint8Array } from '../../crypto/keys'
-import type { CredentialClaims } from '../../types'
+import { sha256 } from "@noble/hashes/sha2.js";
+import { randomBytes } from "@noble/hashes/utils.js";
+import {
+	base64urlToUint8Array,
+	uint8ArrayToBase64url,
+} from "../../crypto/keys";
+import { sign, verifySignature } from "../../crypto/sign";
+import type { CredentialClaims } from "../../types";
 
 export interface SdJwtVcCreateOptions {
-  issuerPrivateKey: Uint8Array
-  issuerPublicKey: Uint8Array
-  issuerDid: string
-  type: string
-  claims: CredentialClaims
-  selectiveDisclosure: string[]
-  holderDid?: string
-  expiresAt?: Date
+	issuerPrivateKey: Uint8Array;
+	issuerPublicKey: Uint8Array;
+	issuerDid: string;
+	type: string;
+	claims: CredentialClaims;
+	selectiveDisclosure: string[];
+	holderDid?: string;
+	expiresAt?: Date;
 }
 
 export interface SdJwtVcVerifyResult {
-  valid: boolean
-  claims: CredentialClaims
-  issuer: string
-  format: 'sd-jwt-vc'
-  issuedAt: Date
-  expiresAt?: Date
-  errors?: string[]
+	valid: boolean;
+	claims: CredentialClaims;
+	issuer: string;
+	format: "sd-jwt-vc";
+	issuedAt: Date;
+	expiresAt?: Date;
+	errors?: string[];
 }
 
 interface Disclosure {
-  salt: string
-  claimName: string
-  claimValue: unknown
-  encoded: string
-  digest: string
+	salt: string;
+	claimName: string;
+	claimValue: unknown;
+	encoded: string;
+	digest: string;
 }
 
 // === CREATE ===
 
-export async function createSdJwtVc(options: SdJwtVcCreateOptions): Promise<string> {
-  const { issuerPrivateKey, issuerDid, type, claims, selectiveDisclosure } = options
+export async function createSdJwtVc(
+	options: SdJwtVcCreateOptions,
+): Promise<string> {
+	const { issuerPrivateKey, issuerDid, type, claims, selectiveDisclosure } =
+		options;
 
-  // Create disclosures for SD claims
-  const disclosures: Disclosure[] = []
-  const sdDigests: string[] = []
-  const plainClaims: Record<string, unknown> = {}
+	// Create disclosures for SD claims
+	const disclosures: Disclosure[] = [];
+	const sdDigests: string[] = [];
+	const plainClaims: Record<string, unknown> = {};
 
-  for (const [key, value] of Object.entries(claims)) {
-    if (selectiveDisclosure.includes(key)) {
-      const disclosure = createDisclosure(key, value)
-      disclosures.push(disclosure)
-      sdDigests.push(disclosure.digest)
-    } else {
-      plainClaims[key] = value
-    }
-  }
+	for (const [key, value] of Object.entries(claims)) {
+		if (selectiveDisclosure.includes(key)) {
+			const disclosure = createDisclosure(key, value);
+			disclosures.push(disclosure);
+			sdDigests.push(disclosure.digest);
+		} else {
+			plainClaims[key] = value;
+		}
+	}
 
-  // Build JWT payload
-  const now = Math.floor(Date.now() / 1000)
-  const payload: Record<string, unknown> = {
-    iss: issuerDid,
-    iat: now,
-    vct: type, // Verifiable Credential Type (SD-JWT VC spec)
-    ...plainClaims,
-  }
+	// Build JWT payload
+	const now = Math.floor(Date.now() / 1000);
+	const payload: Record<string, unknown> = {
+		iss: issuerDid,
+		iat: now,
+		vct: type, // Verifiable Credential Type (SD-JWT VC spec)
+		...plainClaims,
+	};
 
-  if (sdDigests.length > 0) {
-    payload._sd = sdDigests
-    payload._sd_alg = 'sha-256'
-  }
+	if (sdDigests.length > 0) {
+		payload._sd = sdDigests;
+		payload._sd_alg = "sha-256";
+	}
 
-  if (options.holderDid) {
-    payload.sub = options.holderDid
-  }
+	if (options.holderDid) {
+		payload.sub = options.holderDid;
+	}
 
-  if (options.expiresAt) {
-    payload.exp = Math.floor(options.expiresAt.getTime() / 1000)
-  }
+	if (options.expiresAt) {
+		payload.exp = Math.floor(options.expiresAt.getTime() / 1000);
+	}
 
-  // Build JWT header (draft-14: typ = dc+sd-jwt)
-  const header = {
-    alg: 'ES256',
-    typ: 'dc+sd-jwt',
-    kid: `${issuerDid}#key-1`,
-  }
+	// Build JWT header (draft-14: typ = dc+sd-jwt)
+	const header = {
+		alg: "ES256",
+		typ: "dc+sd-jwt",
+		kid: `${issuerDid}#key-1`,
+	};
 
-  // Encode and sign JWT
-  const headerB64 = jsonToBase64url(header)
-  const payloadB64 = jsonToBase64url(payload)
-  const signingInput = new TextEncoder().encode(`${headerB64}.${payloadB64}`)
-  const signature = sign(signingInput, issuerPrivateKey, 'ES256')
-  const signatureB64 = uint8ArrayToBase64url(signature)
+	// Encode and sign JWT
+	const headerB64 = jsonToBase64url(header);
+	const payloadB64 = jsonToBase64url(payload);
+	const signingInput = new TextEncoder().encode(`${headerB64}.${payloadB64}`);
+	const signature = sign(signingInput, issuerPrivateKey, "ES256");
+	const signatureB64 = uint8ArrayToBase64url(signature);
 
-  const jwt = `${headerB64}.${payloadB64}.${signatureB64}`
+	const jwt = `${headerB64}.${payloadB64}.${signatureB64}`;
 
-  // Combine: <jwt>~<disclosure1>~<disclosure2>~...~ (trailing tilde mandatory per spec)
-  const disclosureParts = disclosures.map((d) => d.encoded)
-  return [jwt, ...disclosureParts, ''].join('~')
+	// Combine: <jwt>~<disclosure1>~<disclosure2>~...~ (trailing tilde mandatory per spec)
+	const disclosureParts = disclosures.map((d) => d.encoded);
+	return [jwt, ...disclosureParts, ""].join("~");
 }
 
 // === VERIFY ===
 
 export async function verifySdJwtVc(
-  sdJwt: string,
-  issuerPublicKey: Uint8Array,
+	sdJwt: string,
+	issuerPublicKey: Uint8Array,
 ): Promise<SdJwtVcVerifyResult> {
-  try {
-    const parts = sdJwt.split('~')
-    const jwt = parts[0]!
-    const disclosureStrings = parts.slice(1).filter((d) => d.length > 0)
+	try {
+		const parts = sdJwt.split("~");
+		const jwt = parts[0]!;
+		const disclosureStrings = parts.slice(1).filter((d) => d.length > 0);
 
-    // Parse JWT
-    const jwtParts = jwt.split('.')
-    if (jwtParts.length !== 3) {
-      return { valid: false, claims: {}, issuer: '', format: 'sd-jwt-vc', issuedAt: new Date(), errors: ['Invalid JWT format'] }
-    }
+		// Parse JWT
+		const jwtParts = jwt.split(".");
+		if (jwtParts.length !== 3) {
+			return {
+				valid: false,
+				claims: {},
+				issuer: "",
+				format: "sd-jwt-vc",
+				issuedAt: new Date(),
+				errors: ["Invalid JWT format"],
+			};
+		}
 
-    const payload = base64urlToJson(jwtParts[1]!)
-    const signatureBytes = base64urlToUint8Array(jwtParts[2]!)
+		const payload = base64urlToJson(jwtParts[1]!);
+		const signatureBytes = base64urlToUint8Array(jwtParts[2]!);
 
-    // Verify signature
-    const signingInput = new TextEncoder().encode(`${jwtParts[0]}.${jwtParts[1]}`)
-    const signatureValid = verifySignature(signingInput, signatureBytes, issuerPublicKey, 'ES256')
+		// Verify signature
+		const signingInput = new TextEncoder().encode(
+			`${jwtParts[0]}.${jwtParts[1]}`,
+		);
+		const signatureValid = verifySignature(
+			signingInput,
+			signatureBytes,
+			issuerPublicKey,
+			"ES256",
+		);
 
-    if (!signatureValid) {
-      return { valid: false, claims: {}, issuer: '', format: 'sd-jwt-vc', issuedAt: new Date(), errors: ['Invalid signature'] }
-    }
+		if (!signatureValid) {
+			return {
+				valid: false,
+				claims: {},
+				issuer: "",
+				format: "sd-jwt-vc",
+				issuedAt: new Date(),
+				errors: ["Invalid signature"],
+			};
+		}
 
-    // Process disclosures
-    const claims: CredentialClaims = {}
-    const sdDigests = (payload._sd as string[]) ?? []
+		// Process disclosures
+		const claims: CredentialClaims = {};
+		const sdDigests = (payload._sd as string[]) ?? [];
 
-    // Add plain claims (everything except reserved fields)
-    const reserved = new Set(['iss', 'iat', 'exp', 'vct', 'sub', '_sd', '_sd_alg', 'cnf'])
-    for (const [key, value] of Object.entries(payload)) {
-      if (!reserved.has(key)) {
-        claims[key] = value as string | number | boolean
-      }
-    }
+		// Add plain claims (everything except reserved fields)
+		const reserved = new Set([
+			"iss",
+			"iat",
+			"exp",
+			"vct",
+			"sub",
+			"_sd",
+			"_sd_alg",
+			"cnf",
+		]);
+		for (const [key, value] of Object.entries(payload)) {
+			if (!reserved.has(key)) {
+				claims[key] = value as string | number | boolean;
+			}
+		}
 
-    // Process each disclosure
-    for (const disclosureStr of disclosureStrings) {
-      const disclosureJson = JSON.parse(
-        new TextDecoder().decode(base64urlToUint8Array(disclosureStr))
-      ) as [string, string, unknown]
-      const [, claimName, claimValue] = disclosureJson
+		// Process each disclosure
+		for (const disclosureStr of disclosureStrings) {
+			const disclosureJson = JSON.parse(
+				new TextDecoder().decode(base64urlToUint8Array(disclosureStr)),
+			) as [string, string, unknown];
+			const [, claimName, claimValue] = disclosureJson;
 
-      // Verify disclosure digest is in _sd array
-      const digest = computeDisclosureDigest(disclosureStr)
-      if (sdDigests.includes(digest)) {
-        claims[claimName] = claimValue as string | number | boolean
-      }
-    }
+			// Verify disclosure digest is in _sd array
+			const digest = computeDisclosureDigest(disclosureStr);
+			if (sdDigests.includes(digest)) {
+				claims[claimName] = claimValue as string | number | boolean;
+			}
+		}
 
-    return {
-      valid: true,
-      claims,
-      issuer: payload.iss as string,
-      format: 'sd-jwt-vc',
-      issuedAt: new Date((payload.iat as number) * 1000),
-      expiresAt: payload.exp ? new Date((payload.exp as number) * 1000) : undefined,
-    }
-  } catch (error) {
-    return {
-      valid: false,
-      claims: {},
-      issuer: '',
-      format: 'sd-jwt-vc',
-      issuedAt: new Date(),
-      errors: [(error as Error).message],
-    }
-  }
+		return {
+			valid: true,
+			claims,
+			issuer: payload.iss as string,
+			format: "sd-jwt-vc",
+			issuedAt: new Date((payload.iat as number) * 1000),
+			expiresAt: payload.exp
+				? new Date((payload.exp as number) * 1000)
+				: undefined,
+		};
+	} catch (error) {
+		return {
+			valid: false,
+			claims: {},
+			issuer: "",
+			format: "sd-jwt-vc",
+			issuedAt: new Date(),
+			errors: [(error as Error).message],
+		};
+	}
 }
 
 // === PRESENT (Selective Disclosure) ===
 
 export function presentSdJwtVc(sdJwt: string, revealClaims: string[]): string {
-  const parts = sdJwt.split('~')
-  const jwt = parts[0]!
-  const disclosureStrings = parts.slice(1).filter((d) => d.length > 0)
+	const parts = sdJwt.split("~");
+	const jwt = parts[0]!;
+	const disclosureStrings = parts.slice(1).filter((d) => d.length > 0);
 
-  // Filter disclosures to only include those for requested claims
-  const includedDisclosures: string[] = []
+	// Filter disclosures to only include those for requested claims
+	const includedDisclosures: string[] = [];
 
-  for (const disclosureStr of disclosureStrings) {
-    const disclosureJson = JSON.parse(
-      new TextDecoder().decode(base64urlToUint8Array(disclosureStr))
-    ) as [string, string, unknown]
-    const claimName = disclosureJson[1]
+	for (const disclosureStr of disclosureStrings) {
+		const disclosureJson = JSON.parse(
+			new TextDecoder().decode(base64urlToUint8Array(disclosureStr)),
+		) as [string, string, unknown];
+		const claimName = disclosureJson[1];
 
-    if (revealClaims.includes(claimName)) {
-      includedDisclosures.push(disclosureStr)
-    }
-  }
+		if (revealClaims.includes(claimName)) {
+			includedDisclosures.push(disclosureStr);
+		}
+	}
 
-  // Trailing tilde mandatory per spec
-  return [jwt, ...includedDisclosures, ''].join('~')
+	// Trailing tilde mandatory per spec
+	return [jwt, ...includedDisclosures, ""].join("~");
 }
 
 // === Helpers ===
 
 function createDisclosure(claimName: string, claimValue: unknown): Disclosure {
-  // 128-bit salt per EBSI profile
-  const salt = uint8ArrayToBase64url(randomBytes(16))
-  const disclosureArray = [salt, claimName, claimValue]
-  const encoded = jsonToBase64url(disclosureArray)
-  const digest = computeDisclosureDigest(encoded)
+	// 128-bit salt per EBSI profile
+	const salt = uint8ArrayToBase64url(randomBytes(16));
+	const disclosureArray = [salt, claimName, claimValue];
+	const encoded = jsonToBase64url(disclosureArray);
+	const digest = computeDisclosureDigest(encoded);
 
-  return { salt, claimName, claimValue, encoded, digest }
+	return { salt, claimName, claimValue, encoded, digest };
 }
 
 function computeDisclosureDigest(encoded: string): string {
-  const bytes = new TextEncoder().encode(encoded)
-  const hash = sha256(bytes)
-  return uint8ArrayToBase64url(hash)
+	const bytes = new TextEncoder().encode(encoded);
+	const hash = sha256(bytes);
+	return uint8ArrayToBase64url(hash);
 }
 
 function jsonToBase64url(obj: unknown): string {
-  const json = JSON.stringify(obj)
-  return uint8ArrayToBase64url(new TextEncoder().encode(json))
+	const json = JSON.stringify(obj);
+	return uint8ArrayToBase64url(new TextEncoder().encode(json));
 }
 
 function base64urlToJson(str: string): Record<string, unknown> {
-  const bytes = base64urlToUint8Array(str)
-  const json = new TextDecoder().decode(bytes)
-  return JSON.parse(json) as Record<string, unknown>
+	const bytes = base64urlToUint8Array(str);
+	const json = new TextDecoder().decode(bytes);
+	return JSON.parse(json) as Record<string, unknown>;
 }

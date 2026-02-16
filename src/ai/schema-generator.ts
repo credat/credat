@@ -1,7 +1,7 @@
-import type { AIConfig, AIGeneratedSchema } from '../types'
-import { CredatError, ErrorCodes } from '../errors'
-import { callLLM } from './llm'
-import { extractJson } from './utils'
+import { CredatError, ErrorCodes } from "../errors";
+import type { AIConfig, AIGeneratedSchema } from "../types";
+import { callLLM } from "./llm";
+import { extractJson } from "./utils";
 
 const SYSTEM_PROMPT = `You are an expert in eIDAS 2.0 verifiable credentials and the EU Digital Identity Wallet (EUDIW) ecosystem.
 
@@ -42,27 +42,30 @@ Respond ONLY with a valid JSON object matching this structure:
   }
 }
 
-Do NOT include any text outside the JSON object. No markdown, no explanation.`
+Do NOT include any text outside the JSON object. No markdown, no explanation.`;
 
 export async function generateSchema(
-  config: AIConfig,
-  description: string,
+	config: AIConfig,
+	description: string,
 ): Promise<AIGeneratedSchema> {
-  const response = await callLLM(config, {
-    systemPrompt: SYSTEM_PROMPT,
-    userPrompt: `Generate a credential schema for: "${description}"`,
-    jsonMode: true,
-  })
+	const response = await callLLM(config, {
+		systemPrompt: SYSTEM_PROMPT,
+		userPrompt: `Generate a credential schema for: "${description}"`,
+		jsonMode: true,
+	});
 
-  const raw = JSON.parse(extractJson(response.content)) as Record<string, unknown>
+	const raw = JSON.parse(extractJson(response.content)) as Record<
+		string,
+		unknown
+	>;
 
-  // Validate required fields
-  if (!raw.type || !raw.claims || !raw.format) {
-    throw new CredatError(
-      ErrorCodes.AI_PARSE_FAILED,
-      'AI returned schema missing required fields (type, claims, format)',
-    )
-  }
+	// Validate required fields
+	if (!raw.type || !raw.claims || !raw.format) {
+		throw new CredatError(
+			ErrorCodes.AI_PARSE_FAILED,
+			"AI returned schema missing required fields (type, claims, format)",
+		);
+	}
 
-  return raw as unknown as AIGeneratedSchema
+	return raw as unknown as AIGeneratedSchema;
 }
