@@ -1,5 +1,5 @@
-import type { AIConfig, VerificationError } from '../types'
-import { callLLM } from './llm'
+import type { AIConfig, VerificationError } from "../types";
+import { callLLM } from "./llm";
 
 const SYSTEM_PROMPT = `You are an expert in eIDAS 2.0 verifiable credentials helping developers debug credential verification errors.
 
@@ -10,16 +10,16 @@ Given a verification error, explain:
 
 Be concise (2-3 sentences max). Be specific and actionable.
 Reference eIDAS 2.0 requirements where relevant.
-Do NOT use markdown formatting. Plain text only.`
+Do NOT use markdown formatting. Plain text only.`;
 
 export async function explainError(
-  config: AIConfig,
-  error: VerificationError,
+	config: AIConfig,
+	error: VerificationError,
 ): Promise<string> {
-  const response = await callLLM(config, {
-    systemPrompt: SYSTEM_PROMPT,
-    userPrompt: `Error code: ${error.code}\nError message: ${error.message}${error.humanMessage ? `\nContext: ${error.humanMessage}` : ''}`,
-  })
+	const response = await callLLM(config, {
+		systemPrompt: SYSTEM_PROMPT,
+		userPrompt: `Error code: ${error.code}\nError message: ${error.message}${error.humanMessage ? `\nContext: ${error.humanMessage}` : ""}`,
+	});
 
-  return response.content.trim()
+	return response.content.trim();
 }

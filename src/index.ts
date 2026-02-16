@@ -1,69 +1,68 @@
 // credat — AI-native TypeScript SDK for eIDAS 2.0 verifiable credentials
 
-export const VERSION = '0.1.0-alpha.1'
+export const VERSION = "0.1.0-alpha.1";
 
 // === Main Entry Point ===
-export { createClient } from './client'
-
-// === Types ===
-export type {
-  JsonWebKey,
-  CredentialFormat,
-  CredentialClaims,
-  CredentialSchema,
-  ClaimDefinition,
-  IssuanceRequest,
-  IssuedCredential,
-  VerificationRequest,
-  VerificationResult,
-  VerificationError,
-  TrustChainInfo,
-  DIDMethod,
-  DIDDocument,
-  DIDResolutionResult,
-  DIDCreateOptions,
-  AIGeneratedSchema,
-  ClientConfig,
-  AIConfig,
-  CredatClient,
-} from './types'
-
+export { createClient } from "./client";
+// === Config ===
+export { validateConfig } from "./config";
+// === Credentials (advanced) ===
+export {
+	createMdoc,
+	createSdJwtVc,
+	presentSdJwtVc,
+	verifyMdoc,
+	verifySdJwtVc,
+} from "./credentials";
+export type { Algorithm, KeyPair } from "./crypto";
+// === Crypto (advanced) ===
+export { generateKeyPair, jwkToPublicKey, publicKeyToJwk } from "./crypto";
+// === DID (advanced) ===
+export {
+	createDidKey,
+	createDidWeb,
+	resolveDID,
+	resolveDidKey,
+	resolveDidWeb,
+} from "./did";
 // === Errors ===
 export {
-  CredatError,
-  CredentialError,
-  DIDError,
-  ProtocolError,
-  ErrorCodes,
-} from './errors'
-
-// === Config ===
-export { validateConfig } from './config'
-
-// === Crypto (advanced) ===
-export { generateKeyPair, publicKeyToJwk, jwkToPublicKey } from './crypto'
-export type { Algorithm, KeyPair } from './crypto'
-
-// === DID (advanced) ===
-export { resolveDID } from './did'
-export { createDidKey, resolveDidKey } from './did'
-export { createDidWeb, resolveDidWeb } from './did'
-
-// === Credentials (advanced) ===
-export { createSdJwtVc, verifySdJwtVc, presentSdJwtVc } from './credentials'
-export { createMdoc, verifyMdoc } from './credentials'
-
-// === Trust (advanced) ===
-export { EuTrustList, CustomTrustList, isIssuerTrusted } from './trust'
-
-// === Storage (advanced) ===
-export { MemoryStorage } from './storage'
-export type { StorageAdapter } from './storage'
-
+	CredatError,
+	CredentialError,
+	DIDError,
+	ErrorCodes,
+	ProtocolError,
+} from "./errors";
+export type { KeyManager, StoredKey } from "./keys";
 // === Keys (advanced) ===
-export { LocalKeyManager } from './keys'
-export type { KeyManager, StoredKey } from './keys'
-
+export { LocalKeyManager } from "./keys";
 // === Protocols (advanced) ===
-export { CredentialIssuer } from './protocols/openid4vci/issuer'
-export { CredentialVerifier } from './protocols/openid4vp/verifier'
+export { CredentialIssuer } from "./protocols/openid4vci/issuer";
+export { CredentialVerifier } from "./protocols/openid4vp/verifier";
+export type { StorageAdapter } from "./storage";
+// === Storage (advanced) ===
+export { MemoryStorage } from "./storage";
+// === Trust (advanced) ===
+export { CustomTrustList, EuTrustList, isIssuerTrusted } from "./trust";
+// === Types ===
+export type {
+	AIConfig,
+	AIGeneratedSchema,
+	ClaimDefinition,
+	ClientConfig,
+	CredatClient,
+	CredentialClaims,
+	CredentialFormat,
+	CredentialSchema,
+	DIDCreateOptions,
+	DIDDocument,
+	DIDMethod,
+	DIDResolutionResult,
+	IssuanceRequest,
+	IssuedCredential,
+	JsonWebKey,
+	TrustChainInfo,
+	VerificationError,
+	VerificationRequest,
+	VerificationResult,
+} from "./types";

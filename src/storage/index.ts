@@ -1,2 +1,2 @@
-export type { StorageAdapter } from './types'
-export { MemoryStorage } from './memory'
+export { MemoryStorage } from "./memory";
+export type { StorageAdapter } from "./types";
