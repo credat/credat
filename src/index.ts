@@ -6,13 +6,25 @@ export const VERSION = "0.1.0-alpha.1";
 export { createClient } from "./client";
 // === Config ===
 export { validateConfig } from "./config";
+export type {
+	CreateStatusListCredentialOptions,
+	CreateStatusListOptions,
+	VerifyStatusListCredentialResult,
+} from "./credentials";
 // === Credentials (advanced) ===
 export {
 	createMdoc,
 	createSdJwtVc,
+	createStatusList,
+	createStatusListCredential,
+	decodeStatusList,
+	encodeStatusList,
+	isRevoked,
 	presentSdJwtVc,
+	setRevocationStatus,
 	verifyMdoc,
 	verifySdJwtVc,
+	verifyStatusListCredential,
 } from "./credentials";
 export type { Algorithm, KeyPair } from "./crypto";
 // === Crypto (advanced) ===
@@ -61,6 +73,9 @@ export type {
 	IssuanceRequest,
 	IssuedCredential,
 	JsonWebKey,
+	RevocationStatus,
+	StatusListData,
+	StatusListEntry,
 	TrustChainInfo,
 	VerificationError,
 	VerificationRequest,

@@ -40,6 +40,7 @@ export interface IssuanceRequest {
 	selectiveDisclosure?: string[];
 	holder?: string; // DID of the holder
 	expiresAt?: Date;
+	statusListEntry?: StatusListEntry;
 }
 
 export interface IssuedCredential {
@@ -52,6 +53,7 @@ export interface IssuedCredential {
 	issuedAt: Date;
 	expiresAt?: Date;
 	claims: CredentialClaims;
+	statusListEntry?: StatusListEntry;
 }
 
 export interface VerificationRequest {
@@ -59,6 +61,8 @@ export interface VerificationRequest {
 	requiredClaims?: string[];
 	trustList?: "eu" | "custom";
 	trustedIssuers?: string[];
+	checkRevocation?: boolean;
+	statusList?: StatusListData;
 }
 
 export interface VerificationResult {
@@ -70,6 +74,7 @@ export interface VerificationResult {
 	expiresAt?: Date;
 	errors?: VerificationError[];
 	trustChain?: TrustChainInfo;
+	revocationStatus?: RevocationStatus;
 }
 
 export interface VerificationError {
@@ -121,6 +126,22 @@ export interface DIDResolutionResult {
 	didDocumentMetadata: Record<string, unknown>;
 }
 
+// === Status List Types ===
+
+export interface StatusListEntry {
+	statusListUrl: string;
+	statusListIndex: number;
+}
+
+export interface StatusListData {
+	bitstring: Uint8Array;
+	issuer: string;
+	id: string;
+	size: number;
+}
+
+export type RevocationStatus = "valid" | "revoked" | "unknown";
+
 // === AI Types ===
 
 export interface AIGeneratedSchema extends CredentialSchema {
@@ -140,6 +161,7 @@ export interface ClientConfig {
 	apiKey?: string;
 	baseUrl?: string;
 	ai?: AIConfig;
+	storage?: import("./storage/types").StorageAdapter;
 }
 
 export interface AIConfig {
@@ -165,5 +187,17 @@ export interface CredatClient {
 			options?: { count?: number },
 		) => Promise<IssuedCredential[]>;
 		explainError: (error: VerificationError) => Promise<string>;
+	};
+	statusList: {
+		create: (options: {
+			id: string;
+			url: string;
+			size?: number;
+		}) => Promise<StatusListData>;
+		revoke: (listId: string, index: number) => Promise<void>;
+		unrevoke: (listId: string, index: number) => Promise<void>;
+		isRevoked: (listId: string, index: number) => Promise<boolean>;
+		get: (listId: string) => Promise<StatusListData | null>;
+		export: (listId: string) => Promise<string>;
 	};
 }

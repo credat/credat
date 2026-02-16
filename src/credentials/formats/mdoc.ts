@@ -10,6 +10,8 @@ export interface MdocCreateOptions {
 	nameSpace: string;
 	claims: CredentialClaims;
 	expiresAt?: Date;
+	statusListUrl?: string;
+	statusListIndex?: number;
 }
 
 export interface MdocVerifyResult {
@@ -21,6 +23,7 @@ export interface MdocVerifyResult {
 	issuedAt: Date;
 	expiresAt?: Date;
 	errors?: string[];
+	statusListEntry?: { statusListUrl: string; statusListIndex: number };
 }
 
 // Simplified COSE_Sign1 structure: [protected, unprotected, payload, signature]
@@ -33,7 +36,7 @@ export async function createMdoc(
 
 	// Build issuer-signed data
 	const now = new Date();
-	const issuerSignedData = {
+	const issuerSignedData: Record<string, unknown> = {
 		docType,
 		nameSpace,
 		claims,
@@ -41,6 +44,11 @@ export async function createMdoc(
 		issuedAt: now.toISOString(),
 		expiresAt: options.expiresAt?.toISOString(),
 	};
+
+	if (options.statusListUrl != null && options.statusListIndex != null) {
+		issuerSignedData.statusListUrl = options.statusListUrl;
+		issuerSignedData.statusListIndex = options.statusListIndex;
+	}
 
 	// COSE protected header: { 1: -7 } (1 = alg, -7 = ES256)
 	const protectedHeader = encode({ 1: -7 });
@@ -90,6 +98,8 @@ export async function verifyMdoc(
 			issuer: string;
 			issuedAt: string;
 			expiresAt?: string;
+			statusListUrl?: string;
+			statusListIndex?: number;
 		};
 
 		// Reconstruct Sig_structure for verification
@@ -120,6 +130,15 @@ export async function verifyMdoc(
 			};
 		}
 
+		const statusListEntry =
+			issuerSignedData.statusListUrl != null &&
+			issuerSignedData.statusListIndex != null
+				? {
+						statusListUrl: issuerSignedData.statusListUrl,
+						statusListIndex: issuerSignedData.statusListIndex,
+					}
+				: undefined;
+
 		return {
 			valid: true,
 			claims: issuerSignedData.claims,
@@ -130,6 +149,7 @@ export async function verifyMdoc(
 			expiresAt: issuerSignedData.expiresAt
 				? new Date(issuerSignedData.expiresAt)
 				: undefined,
+			statusListEntry,
 		};
 	} catch (error) {
 		return {
