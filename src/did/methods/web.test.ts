@@ -73,4 +73,30 @@ describe("resolveDidWeb", () => {
 		expect(result.didDocument).toBeNull();
 		expect(result.didResolutionMetadata.error).toBe("notFound");
 	});
+
+	it("returns invalidDid when document id does not match DID", async () => {
+		const mockDocument = {
+			id: "did:web:wrong.com",
+			verificationMethod: [],
+		};
+
+		global.fetch = vi.fn().mockResolvedValue({
+			ok: true,
+			json: () => Promise.resolve(mockDocument),
+		}) as any;
+
+		const result = await resolveDidWeb("did:web:example.com");
+		expect(result.didDocument).toBeNull();
+		expect(result.didResolutionMetadata.error).toBe("invalidDid");
+	});
+
+	it("returns networkError for fetch failure", async () => {
+		global.fetch = vi
+			.fn()
+			.mockRejectedValue(new TypeError("fetch failed")) as any;
+
+		const result = await resolveDidWeb("did:web:unreachable.com");
+		expect(result.didDocument).toBeNull();
+		expect(result.didResolutionMetadata.error).toBe("networkError");
+	});
 });

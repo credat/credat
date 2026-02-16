@@ -13,6 +13,16 @@ describe("sign and verify", () => {
 		);
 	});
 
+	it("signs and verifies with ES256K", () => {
+		const kp = generateKeyPair("ES256K");
+		const payload = new TextEncoder().encode("hello eidas");
+		const signature = sign(payload, kp.privateKey, "ES256K");
+		expect(signature).toBeInstanceOf(Uint8Array);
+		expect(verifySignature(payload, signature, kp.publicKey, "ES256K")).toBe(
+			true,
+		);
+	});
+
 	it("signs and verifies with EdDSA", () => {
 		const kp = generateKeyPair("EdDSA");
 		const payload = new TextEncoder().encode("hello eidas");

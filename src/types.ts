@@ -91,13 +91,16 @@ export interface TrustChainInfo {
 
 // === DID Types ===
 
-export type DIDMethod = "key" | "web" | "ebsi";
+export type DIDMethod = "key" | "web" | "jwk" | "ebsi";
 
 export interface DIDDocument {
 	id: string;
 	verificationMethod?: VerificationMethod[];
 	authentication?: string[];
 	assertionMethod?: string[];
+	capabilityInvocation?: string[];
+	capabilityDelegation?: string[];
+	keyAgreement?: (string | VerificationMethod)[];
 	service?: ServiceEndpoint[];
 }
 

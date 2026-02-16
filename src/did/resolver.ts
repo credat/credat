@@ -1,6 +1,7 @@
 import { DIDError, ErrorCodes } from "../errors";
 import type { DIDResolutionResult } from "../types";
 import { resolveDidEbsi } from "./methods/ebsi";
+import { resolveDidJwk } from "./methods/jwk";
 import { resolveDidKey } from "./methods/key";
 import { resolveDidWeb } from "./methods/web";
 
@@ -19,6 +20,8 @@ export async function resolveDID(did: string): Promise<DIDResolutionResult> {
 	switch (method) {
 		case "key":
 			return resolveDidKey(did);
+		case "jwk":
+			return resolveDidJwk(did);
 		case "web":
 			return resolveDidWeb(did);
 		case "ebsi":
@@ -27,7 +30,7 @@ export async function resolveDID(did: string): Promise<DIDResolutionResult> {
 			throw new DIDError(
 				ErrorCodes.DID_METHOD_UNSUPPORTED,
 				`Unsupported DID method: ${method}`,
-				`The DID method "${method}" is not supported. Supported methods: key, web, ebsi.`,
+				`The DID method "${method}" is not supported. Supported methods: key, jwk, web, ebsi.`,
 			);
 	}
 }

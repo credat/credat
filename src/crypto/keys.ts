@@ -1,9 +1,10 @@
 import { ed25519 } from "@noble/curves/ed25519.js";
 import { p256 } from "@noble/curves/nist.js";
+import { secp256k1 } from "@noble/curves/secp256k1.js";
 import { bytesToHex, randomBytes } from "@noble/hashes/utils.js";
 import type { JsonWebKey } from "../types";
 
-export type Algorithm = "ES256" | "EdDSA";
+export type Algorithm = "ES256" | "EdDSA" | "ES256K";
 
 export interface KeyPair {
 	algorithm: Algorithm;
@@ -21,6 +22,11 @@ export function generateKeyPair(algorithm: Algorithm): KeyPair {
 
 	if (algorithm === "EdDSA") {
 		const publicKey = ed25519.getPublicKey(privateKey);
+		return { algorithm, privateKey, publicKey };
+	}
+
+	if (algorithm === "ES256K") {
+		const publicKey = secp256k1.getPublicKey(privateKey, true); // compressed 33 bytes
 		return { algorithm, privateKey, publicKey };
 	}
 
@@ -54,6 +60,20 @@ export function publicKeyToJwk(
 		};
 	}
 
+	if (algorithm === "ES256K") {
+		const point = secp256k1.Point.fromHex(bytesToHex(publicKey));
+		const uncompressed = point.toBytes(false); // 65 bytes: 0x04 || x || y
+		const x = uncompressed.slice(1, 33);
+		const y = uncompressed.slice(33, 65);
+
+		return {
+			kty: "EC",
+			crv: "secp256k1",
+			x: uint8ArrayToBase64url(x),
+			y: uint8ArrayToBase64url(y),
+		};
+	}
+
 	throw new Error(`Unsupported algorithm: ${algorithm}`);
 }
 
@@ -72,6 +92,17 @@ export function jwkToPublicKey(jwk: JsonWebKey): Uint8Array {
 
 	if (jwk.kty === "OKP" && jwk.crv === "Ed25519") {
 		return base64urlToUint8Array(jwk.x!);
+	}
+
+	if (jwk.kty === "EC" && jwk.crv === "secp256k1") {
+		const x = base64urlToUint8Array(jwk.x!);
+		const y = base64urlToUint8Array(jwk.y!);
+		const uncompressed = new Uint8Array(65);
+		uncompressed[0] = 0x04;
+		uncompressed.set(x, 1);
+		uncompressed.set(y, 33);
+		const point = secp256k1.Point.fromHex(bytesToHex(uncompressed));
+		return point.toBytes(true); // compressed
 	}
 
 	throw new Error(`Unsupported JWK: kty=${jwk.kty}, crv=${jwk.crv}`);
