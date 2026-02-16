@@ -16,6 +16,16 @@
         "types": "./dist/index.d.cts",
         "default": "./dist/index.cjs"
       }
+    },
+    "./sqlite": {
+      "import": {
+        "types": "./dist/storage/sqlite.d.ts",
+        "default": "./dist/storage/sqlite.js"
+      },
+      "require": {
+        "types": "./dist/storage/sqlite.d.cts",
+        "default": "./dist/storage/sqlite.cjs"
+      }
     }
   },
   "files": [
@@ -56,9 +66,19 @@
     "@noble/hashes": "^2.0.1",
     "cbor-x": "^1.6.0"
   },
+  "peerDependencies": {
+    "better-sqlite3": ">=11.0.0"
+  },
+  "peerDependenciesMeta": {
+    "better-sqlite3": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@biomejs/biome": "^2.4.0",
+    "@types/better-sqlite3": "^7.6.12",
     "@types/node": "^25.2.3",
+    "better-sqlite3": "^11.8.1",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"

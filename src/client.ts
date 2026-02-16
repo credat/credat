@@ -5,6 +5,12 @@ import { validateConfig } from "./config";
 import { createMdoc, verifyMdoc } from "./credentials/formats/mdoc";
 import { createSdJwtVc, verifySdJwtVc } from "./credentials/formats/sd-jwt-vc";
 import {
+	createStatusList as createStatusListCore,
+	createStatusListCredential,
+	isRevoked as isRevokedCore,
+	setRevocationStatus,
+} from "./credentials/status-list";
+import {
 	base64urlToUint8Array,
 	generateKeyPair,
 	jwkToPublicKey,
@@ -13,7 +19,9 @@ import {
 import { createDidKey } from "./did/methods/key";
 import { createDidWeb } from "./did/methods/web";
 import { resolveDID } from "./did/resolver";
-import { CredatError, ErrorCodes } from "./errors";
+import { CredatError, CredentialError, ErrorCodes } from "./errors";
+import { MemoryStorage } from "./storage";
+import type { StorageAdapter } from "./storage/types";
 import { isIssuerTrusted } from "./trust/trust-list";
 import type {
 	AIConfig,
@@ -25,11 +33,22 @@ import type {
 	DIDResolutionResult,
 	IssuanceRequest,
 	IssuedCredential,
+	RevocationStatus,
+	StatusListData,
 	TrustChainInfo,
 	VerificationError,
 	VerificationRequest,
 	VerificationResult,
 } from "./types";
+
+const STATUS_LIST_COLLECTION = "status-lists";
+
+interface StoredStatusList {
+	bitstring: string; // base64url-encoded raw bitstring (not gzipped)
+	issuer: string;
+	id: string;
+	size: number;
+}
 
 export function createClient(config: ClientConfig): CredatClient {
 	const validated = validateConfig(config);
@@ -48,6 +67,7 @@ export function createClient(config: ClientConfig): CredatClient {
 function createLocalClient(config: ClientConfig): CredatClient {
 	const keyPair = generateKeyPair("ES256");
 	const issuerDid = createDidKey(keyPair.publicKey, "ES256");
+	const storage: StorageAdapter = config.storage ?? new MemoryStorage();
 
 	return {
 		credentials: createCredentialsModule(
@@ -62,6 +82,7 @@ function createLocalClient(config: ClientConfig): CredatClient {
 			keyPair.publicKey,
 			issuerDid,
 		),
+		statusList: createStatusListModule(storage, issuerDid, keyPair.privateKey),
 	};
 }
 
@@ -88,6 +109,8 @@ function createCredentialsModule(
 					selectiveDisclosure: request.selectiveDisclosure ?? [],
 					holderDid: request.holder,
 					expiresAt: request.expiresAt,
+					statusListUrl: request.statusListEntry?.statusListUrl,
+					statusListIndex: request.statusListEntry?.statusListIndex,
 				});
 
 				return {
@@ -100,6 +123,7 @@ function createCredentialsModule(
 					issuedAt: now,
 					expiresAt: request.expiresAt,
 					claims: request.claims,
+					statusListEntry: request.statusListEntry,
 				};
 			}
 
@@ -112,6 +136,8 @@ function createCredentialsModule(
 				nameSpace: `org.iso.18013.5.1.${request.type}`,
 				claims: request.claims,
 				expiresAt: request.expiresAt,
+				statusListUrl: request.statusListEntry?.statusListUrl,
+				statusListIndex: request.statusListEntry?.statusListIndex,
 			});
 
 			return {
@@ -124,12 +150,11 @@ function createCredentialsModule(
 				issuedAt: now,
 				expiresAt: request.expiresAt,
 				claims: request.claims,
+				statusListEntry: request.statusListEntry,
 			};
 		},
 
 		async verify(request: VerificationRequest): Promise<VerificationResult> {
-			// SD-JWT VCs contain '~' as a disclosure separator. This character is not in the
-			// base64url alphabet (A-Za-z0-9-_), so it cannot appear in base64url-encoded mDocs.
 			const isSdJwt = request.credential.includes("~");
 
 			if (isSdJwt) {
@@ -145,7 +170,6 @@ async function verifySdJwtCredential(
 	request: VerificationRequest,
 	fallbackPublicKey: Uint8Array,
 ): Promise<VerificationResult> {
-	// Try to resolve issuer key from the credential itself
 	const issuerPublicKey =
 		(await resolveIssuerKeyFromSdJwt(request.credential)) ?? fallbackPublicKey;
 
@@ -159,7 +183,6 @@ async function verifySdJwtCredential(
 		}
 	}
 
-	// Check expiry
 	if (result.valid && result.expiresAt && result.expiresAt < new Date()) {
 		errors.push({
 			code: ErrorCodes.EXPIRED,
@@ -167,7 +190,6 @@ async function verifySdJwtCredential(
 		});
 	}
 
-	// Check required claims
 	if (request.requiredClaims) {
 		const missing = request.requiredClaims.filter((c) => !(c in result.claims));
 		if (missing.length > 0) {
@@ -178,7 +200,6 @@ async function verifySdJwtCredential(
 		}
 	}
 
-	// Check trust list
 	let trustChain: TrustChainInfo | undefined;
 	if (request.trustList) {
 		trustChain = await isIssuerTrusted(
@@ -194,6 +215,28 @@ async function verifySdJwtCredential(
 		}
 	}
 
+	// Check revocation
+	let revocationStatus: RevocationStatus | undefined;
+	if (request.checkRevocation) {
+		if (result.statusListEntry && request.statusList) {
+			const revoked = isRevokedCore(
+				request.statusList,
+				result.statusListEntry.statusListIndex,
+			);
+			if (revoked) {
+				revocationStatus = "revoked";
+				errors.push({
+					code: ErrorCodes.REVOKED,
+					message: "Credential has been revoked",
+				});
+			} else {
+				revocationStatus = "valid";
+			}
+		} else {
+			revocationStatus = "unknown";
+		}
+	}
+
 	return {
 		valid: result.valid && errors.length === 0,
 		claims: result.claims,
@@ -203,6 +246,7 @@ async function verifySdJwtCredential(
 		expiresAt: result.expiresAt,
 		errors: errors.length > 0 ? errors : undefined,
 		trustChain,
+		revocationStatus,
 	};
 }
 
@@ -238,6 +282,28 @@ async function verifyMdocCredential(
 		}
 	}
 
+	// Check revocation
+	let revocationStatus: RevocationStatus | undefined;
+	if (request.checkRevocation) {
+		if (result.statusListEntry && request.statusList) {
+			const revoked = isRevokedCore(
+				request.statusList,
+				result.statusListEntry.statusListIndex,
+			);
+			if (revoked) {
+				revocationStatus = "revoked";
+				errors.push({
+					code: ErrorCodes.REVOKED,
+					message: "Credential has been revoked",
+				});
+			} else {
+				revocationStatus = "valid";
+			}
+		} else {
+			revocationStatus = "unknown";
+		}
+	}
+
 	return {
 		valid: result.valid && errors.length === 0,
 		claims: result.claims,
@@ -246,6 +312,7 @@ async function verifyMdocCredential(
 		issuedAt: result.issuedAt,
 		expiresAt: result.expiresAt,
 		errors: errors.length > 0 ? errors : undefined,
+		revocationStatus,
 	};
 }
 
@@ -308,6 +375,109 @@ function createDIDModule() {
 	};
 }
 
+// === Status List Module ===
+
+function createStatusListModule(
+	storage: StorageAdapter,
+	issuerDid: string,
+	issuerPrivateKey: Uint8Array,
+) {
+	async function loadList(listId: string): Promise<StatusListData | null> {
+		const stored = await storage.get<StoredStatusList>(
+			STATUS_LIST_COLLECTION,
+			listId,
+		);
+		if (!stored) return null;
+		return {
+			bitstring: base64urlToUint8Array(stored.bitstring),
+			issuer: stored.issuer,
+			id: stored.id,
+			size: stored.size,
+		};
+	}
+
+	async function saveList(list: StatusListData): Promise<void> {
+		const stored: StoredStatusList = {
+			bitstring: uint8ArrayToBase64url(list.bitstring),
+			issuer: list.issuer,
+			id: list.id,
+			size: list.size,
+		};
+		await storage.set(STATUS_LIST_COLLECTION, list.id, stored);
+	}
+
+	return {
+		async create(options: {
+			id: string;
+			url: string;
+			size?: number;
+		}): Promise<StatusListData> {
+			const list = createStatusListCore({
+				id: options.id,
+				issuer: issuerDid,
+				url: options.url,
+				size: options.size,
+			});
+			await saveList(list);
+			return list;
+		},
+
+		async revoke(listId: string, index: number): Promise<void> {
+			const list = await loadList(listId);
+			if (!list) {
+				throw new CredentialError(
+					ErrorCodes.STATUS_LIST_INVALID,
+					`Status list "${listId}" not found`,
+				);
+			}
+			setRevocationStatus(list, index, true);
+			await saveList(list);
+		},
+
+		async unrevoke(listId: string, index: number): Promise<void> {
+			const list = await loadList(listId);
+			if (!list) {
+				throw new CredentialError(
+					ErrorCodes.STATUS_LIST_INVALID,
+					`Status list "${listId}" not found`,
+				);
+			}
+			setRevocationStatus(list, index, false);
+			await saveList(list);
+		},
+
+		async isRevoked(listId: string, index: number): Promise<boolean> {
+			const list = await loadList(listId);
+			if (!list) {
+				throw new CredentialError(
+					ErrorCodes.STATUS_LIST_INVALID,
+					`Status list "${listId}" not found`,
+				);
+			}
+			return isRevokedCore(list, index);
+		},
+
+		async get(listId: string): Promise<StatusListData | null> {
+			return loadList(listId);
+		},
+
+		async export(listId: string): Promise<string> {
+			const list = await loadList(listId);
+			if (!list) {
+				throw new CredentialError(
+					ErrorCodes.STATUS_LIST_INVALID,
+					`Status list "${listId}" not found`,
+				);
+			}
+			return createStatusListCredential({
+				list,
+				issuerPrivateKey,
+				url: `${listId}`,
+			});
+		},
+	};
+}
+
 // === AI Module ===
 
 function createAIModule(
@@ -343,7 +513,6 @@ function createAIModule(
 				count,
 			);
 
-			// Issue real signed credentials from the generated mock data
 			const credentials: IssuedCredential[] = [];
 
 			for (const claims of claimsArray) {

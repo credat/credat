@@ -6,6 +6,7 @@ import {
 } from "../../crypto/keys";
 import { sign, verifySignature } from "../../crypto/sign";
 import type { CredentialClaims } from "../../types";
+import { base64urlToJson, jsonToBase64url } from "../utils";
 
 export interface SdJwtVcCreateOptions {
 	issuerPrivateKey: Uint8Array;
@@ -16,6 +17,8 @@ export interface SdJwtVcCreateOptions {
 	selectiveDisclosure: string[];
 	holderDid?: string;
 	expiresAt?: Date;
+	statusListUrl?: string;
+	statusListIndex?: number;
 }
 
 export interface SdJwtVcVerifyResult {
@@ -26,6 +29,7 @@ export interface SdJwtVcVerifyResult {
 	issuedAt: Date;
 	expiresAt?: Date;
 	errors?: string[];
+	statusListEntry?: { statusListUrl: string; statusListIndex: number };
 }
 
 interface Disclosure {
@@ -79,6 +83,15 @@ export async function createSdJwtVc(
 
 	if (options.expiresAt) {
 		payload.exp = Math.floor(options.expiresAt.getTime() / 1000);
+	}
+
+	if (options.statusListUrl != null && options.statusListIndex != null) {
+		payload.status = {
+			status_list: {
+				idx: options.statusListIndex,
+				uri: options.statusListUrl,
+			},
+		};
 	}
 
 	// Build JWT header (draft-14: typ = dc+sd-jwt)
@@ -165,6 +178,7 @@ export async function verifySdJwtVc(
 			"_sd",
 			"_sd_alg",
 			"cnf",
+			"status",
 		]);
 		for (const [key, value] of Object.entries(payload)) {
 			if (!reserved.has(key)) {
@@ -186,6 +200,19 @@ export async function verifySdJwtVc(
 			}
 		}
 
+		// Extract status list entry if present
+		const statusPayload = payload.status as
+			| { status_list?: { idx?: number; uri?: string } }
+			| undefined;
+		const statusListEntry =
+			statusPayload?.status_list?.uri != null &&
+			statusPayload?.status_list?.idx != null
+				? {
+						statusListUrl: statusPayload.status_list.uri,
+						statusListIndex: statusPayload.status_list.idx,
+					}
+				: undefined;
+
 		return {
 			valid: true,
 			claims,
@@ -195,6 +222,7 @@ export async function verifySdJwtVc(
 			expiresAt: payload.exp
 				? new Date((payload.exp as number) * 1000)
 				: undefined,
+			statusListEntry,
 		};
 	} catch (error) {
 		return {
@@ -249,15 +277,4 @@ function computeDisclosureDigest(encoded: string): string {
 	const bytes = new TextEncoder().encode(encoded);
 	const hash = sha256(bytes);
 	return uint8ArrayToBase64url(hash);
-}
-
-function jsonToBase64url(obj: unknown): string {
-	const json = JSON.stringify(obj);
-	return uint8ArrayToBase64url(new TextEncoder().encode(json));
-}
-
-function base64urlToJson(str: string): Record<string, unknown> {
-	const bytes = base64urlToUint8Array(str);
-	const json = new TextDecoder().decode(bytes);
-	return JSON.parse(json) as Record<string, unknown>;
 }
