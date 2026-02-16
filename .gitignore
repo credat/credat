@@ -5,3 +5,8 @@ dist/
 .env.local
 coverage/
 .DS_Store
+
+# Agent tooling
+_bmad/
+_bmad-output/
+.claude/
