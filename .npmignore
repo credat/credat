@@ -1,0 +1,13 @@
+src/
+**/*.test.ts
+vitest.config.ts
+tsup.config.ts
+tsconfig.json
+biome.json
+.github/
+coverage/
+examples/
+docs/
+_bmad/
+_bmad-output/
+.claude/
