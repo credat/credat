@@ -62,8 +62,10 @@ export async function verifyMdoc(
   issuerPublicKey: Uint8Array,
 ): Promise<MdocVerifyResult> {
   try {
-    // Decode COSE_Sign1
-    const decoded = decode(mdocBytes) as [Uint8Array, Record<string, unknown>, Uint8Array, Uint8Array]
+    // Normalize input — cbor-x decodes internal byte strings differently
+    // for Buffer vs Uint8Array inputs, which breaks signature verification
+    const normalizedInput = Buffer.isBuffer(mdocBytes) ? mdocBytes : Buffer.from(mdocBytes)
+    const decoded = decode(normalizedInput) as [Uint8Array, Record<string, unknown>, Uint8Array, Uint8Array]
     const [protectedHeader, , payload, signature] = decoded
 
     // Decode payload
