@@ -25,7 +25,7 @@
 <div align="center">
 
 [![npm version](https://img.shields.io/npm/v/credat?color=4f46e5&label=npm)](https://www.npmjs.com/package/credat)
-[![license](https://img.shields.io/npm/l/credat?color=4f46e5)](./LICENSE)
+[![license](https://img.shields.io/github/license/credat/credat?color=4f46e5)](./LICENSE)
 [![build](https://img.shields.io/github/actions/workflow/status/credat/credat/ci.yml?branch=develop&label=tests)](https://github.com/credat/credat/actions)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-4f46e5)](https://www.typescriptlang.org/)
 
