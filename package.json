@@ -1,7 +1,7 @@
 {
   "name": "credat",
-  "version": "0.1.1-alpha.1",
-  "description": "AI-native TypeScript SDK for eIDAS 2.0 verifiable credentials",
+  "version": "0.2.0-alpha.1",
+  "description": "Trust layer for AI agents — delegation, verification, and mutual trust using DIDs and Verifiable Credentials",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -44,22 +44,20 @@
     "prepublishOnly": "npm run build"
   },
   "keywords": [
-    "eidas",
-    "verifiable-credentials",
-    "ssi",
-    "sd-jwt",
-    "openid4vc",
-    "openid4vci",
-    "openid4vp",
-    "mdoc",
-    "did",
+    "agent",
     "identity",
-    "typescript"
+    "trust",
+    "delegation",
+    "verifiable-credentials",
+    "did",
+    "sd-jwt",
+    "typescript",
+    "ai-agent"
   ],
   "author": "Maxime Mansiet",
   "license": "Apache-2.0",
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.0.0"
   },
   "dependencies": {
     "@noble/curves": "^2.0.1",
