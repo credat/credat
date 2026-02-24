@@ -33,10 +33,13 @@ export {
 } from "./did";
 // === Errors ===
 export {
+	AgentError,
 	CredatError,
 	CredentialError,
+	DelegationError,
 	DIDError,
 	ErrorCodes,
+	HandshakeError,
 } from "./errors";
 // === Storage ===
 export type { StorageAdapter } from "./storage";

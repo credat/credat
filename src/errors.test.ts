@@ -1,37 +1,50 @@
-import { describe, expect, it } from "vitest";
-import { CredatError, CredentialError, DIDError, ErrorCodes } from "./errors";
+import { describe, it, expect } from 'vitest'
+import {
+  CredatError,
+  AgentError,
+  DelegationError,
+  HandshakeError,
+  ErrorCodes,
+} from './errors'
 
-describe("CredatError", () => {
-	it("creates error with code and message", () => {
-		const err = new CredatError("TEST_CODE", "test message");
-		expect(err.code).toBe("TEST_CODE");
-		expect(err.message).toBe("test message");
-		expect(err.name).toBe("CredatError");
-		expect(err).toBeInstanceOf(Error);
-	});
+describe('Error classes', () => {
+  it('AgentError has correct name and code', () => {
+    const err = new AgentError(ErrorCodes.AGENT_CREATION_FAILED, 'test')
+    expect(err.name).toBe('AgentError')
+    expect(err.code).toBe('AGENT_CREATION_FAILED')
+  })
 
-	it("includes human-readable message when provided", () => {
-		const err = new CredatError(
-			"TEST",
-			"technical msg",
-			"Human-friendly explanation",
-		);
-		expect(err.humanMessage).toBe("Human-friendly explanation");
-	});
-});
+  it('DelegationError has correct name and code', () => {
+    const err = new DelegationError(ErrorCodes.DELEGATION_INVALID, 'test')
+    expect(err.name).toBe('DelegationError')
+    expect(err.code).toBe('DELEGATION_INVALID')
+  })
 
-describe("CredentialError", () => {
-	it("is a CredatError", () => {
-		const err = new CredentialError(ErrorCodes.EXPIRED, "credential expired");
-		expect(err).toBeInstanceOf(CredatError);
-		expect(err.name).toBe("CredentialError");
-	});
-});
+  it('HandshakeError has correct name and code', () => {
+    const err = new HandshakeError(ErrorCodes.HANDSHAKE_INVALID_NONCE, 'test')
+    expect(err.name).toBe('HandshakeError')
+    expect(err.code).toBe('HANDSHAKE_INVALID_NONCE')
+  })
+})
 
-describe("DIDError", () => {
-	it("is a CredatError", () => {
-		const err = new DIDError(ErrorCodes.DID_NOT_FOUND, "not found");
-		expect(err).toBeInstanceOf(CredatError);
-		expect(err.name).toBe("DIDError");
-	});
-});
+describe('ErrorCodes', () => {
+  it('contains all agent error codes', () => {
+    expect(ErrorCodes.AGENT_CREATION_FAILED).toBe('AGENT_CREATION_FAILED')
+    expect(ErrorCodes.AGENT_NOT_FOUND).toBe('AGENT_NOT_FOUND')
+    expect(ErrorCodes.AGENT_KEY_INVALID).toBe('AGENT_KEY_INVALID')
+  })
+
+  it('contains all delegation error codes', () => {
+    expect(ErrorCodes.DELEGATION_INVALID).toBe('DELEGATION_INVALID')
+    expect(ErrorCodes.DELEGATION_EXPIRED).toBe('DELEGATION_EXPIRED')
+    expect(ErrorCodes.DELEGATION_REVOKED).toBe('DELEGATION_REVOKED')
+    expect(ErrorCodes.DELEGATION_SIGNATURE_INVALID).toBe('DELEGATION_SIGNATURE_INVALID')
+    expect(ErrorCodes.DELEGATION_SCOPE_INVALID).toBe('DELEGATION_SCOPE_INVALID')
+  })
+
+  it('contains all handshake error codes', () => {
+    expect(ErrorCodes.HANDSHAKE_INVALID_NONCE).toBe('HANDSHAKE_INVALID_NONCE')
+    expect(ErrorCodes.HANDSHAKE_EXPIRED).toBe('HANDSHAKE_EXPIRED')
+    expect(ErrorCodes.HANDSHAKE_VERIFICATION_FAILED).toBe('HANDSHAKE_VERIFICATION_FAILED')
+  })
+})

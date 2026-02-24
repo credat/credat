@@ -1,12 +1,18 @@
 export class CredatError extends Error {
-	public readonly code: string;
-	public readonly humanMessage?: string;
-
-	constructor(code: string, message: string, humanMessage?: string) {
+	constructor(
+		public readonly code: string,
+		message: string,
+		public readonly humanMessage?: string,
+	) {
 		super(message);
 		this.name = "CredatError";
-		this.code = code;
-		this.humanMessage = humanMessage;
+	}
+}
+
+export class DIDError extends CredatError {
+	constructor(code: string, message: string, humanMessage?: string) {
+		super(code, message, humanMessage);
+		this.name = "DIDError";
 	}
 }
 
@@ -17,36 +23,53 @@ export class CredentialError extends CredatError {
 	}
 }
 
-export class DIDError extends CredatError {
+export class AgentError extends CredatError {
 	constructor(code: string, message: string, humanMessage?: string) {
 		super(code, message, humanMessage);
-		this.name = "DIDError";
+		this.name = "AgentError";
 	}
 }
-// Error codes
-export const ErrorCodes = {
-	// Credential errors
-	INVALID_CLAIMS: "CREDENTIAL_INVALID_CLAIMS",
-	INVALID_FORMAT: "CREDENTIAL_INVALID_FORMAT",
-	EXPIRED: "CREDENTIAL_EXPIRED",
-	SIGNATURE_INVALID: "CREDENTIAL_SIGNATURE_INVALID",
-	ISSUER_UNTRUSTED: "CREDENTIAL_ISSUER_UNTRUSTED",
-	MISSING_REQUIRED_CLAIMS: "CREDENTIAL_MISSING_REQUIRED_CLAIMS",
 
-	// DID errors
+export class DelegationError extends CredatError {
+	constructor(code: string, message: string, humanMessage?: string) {
+		super(code, message, humanMessage);
+		this.name = "DelegationError";
+	}
+}
+
+export class HandshakeError extends CredatError {
+	constructor(code: string, message: string, humanMessage?: string) {
+		super(code, message, humanMessage);
+		this.name = "HandshakeError";
+	}
+}
+
+export const ErrorCodes = {
+	// DID
 	DID_NOT_FOUND: "DID_NOT_FOUND",
 	DID_METHOD_UNSUPPORTED: "DID_METHOD_UNSUPPORTED",
 	DID_RESOLUTION_FAILED: "DID_RESOLUTION_FAILED",
 
-	// Revocation errors
-	REVOKED: "CREDENTIAL_REVOKED",
+	// Credential
+	CREDENTIAL_INVALID_FORMAT: "CREDENTIAL_INVALID_FORMAT",
+	CREDENTIAL_EXPIRED: "CREDENTIAL_EXPIRED",
+	CREDENTIAL_SIGNATURE_INVALID: "CREDENTIAL_SIGNATURE_INVALID",
 	STATUS_LIST_INVALID: "STATUS_LIST_INVALID",
 
-	// Config errors
-	MISSING_API_KEY: "CONFIG_MISSING_API_KEY",
-	INVALID_CONFIG: "CONFIG_INVALID",
+	// Agent
+	AGENT_CREATION_FAILED: "AGENT_CREATION_FAILED",
+	AGENT_NOT_FOUND: "AGENT_NOT_FOUND",
+	AGENT_KEY_INVALID: "AGENT_KEY_INVALID",
 
-	// AI errors
-	AI_REQUEST_FAILED: "AI_REQUEST_FAILED",
-	AI_PARSE_FAILED: "AI_PARSE_FAILED",
+	// Delegation
+	DELEGATION_INVALID: "DELEGATION_INVALID",
+	DELEGATION_EXPIRED: "DELEGATION_EXPIRED",
+	DELEGATION_REVOKED: "DELEGATION_REVOKED",
+	DELEGATION_SIGNATURE_INVALID: "DELEGATION_SIGNATURE_INVALID",
+	DELEGATION_SCOPE_INVALID: "DELEGATION_SCOPE_INVALID",
+
+	// Handshake
+	HANDSHAKE_INVALID_NONCE: "HANDSHAKE_INVALID_NONCE",
+	HANDSHAKE_EXPIRED: "HANDSHAKE_EXPIRED",
+	HANDSHAKE_VERIFICATION_FAILED: "HANDSHAKE_VERIFICATION_FAILED",
 } as const;
