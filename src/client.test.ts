@@ -44,24 +44,6 @@ describe("createClient", () => {
 			expect(credential.issuedAt).toBeInstanceOf(Date);
 		});
 
-		it("issues an mDoc credential", async () => {
-			const client = createClient({ mode: "local" });
-
-			const credential = await client.credentials.issue({
-				type: "IdentityDocument",
-				claims: {
-					givenName: "Bob",
-					familyName: "Martin",
-				},
-				format: "mdoc",
-			});
-
-			expect(credential.id).toMatch(/^urn:uuid:/);
-			expect(credential.format).toBe("mdoc");
-			expect(credential.raw.length).toBeGreaterThan(0);
-			expect(credential.claims.givenName).toBe("Bob");
-		});
-
 		it("defaults to sd-jwt-vc format", async () => {
 			const client = createClient({ mode: "local" });
 
@@ -98,24 +80,6 @@ describe("createClient", () => {
 			expect(result.claims.givenName).toBe("Alice");
 			expect(result.claims.familyName).toBe("Dupont");
 			expect(result.issuer).toMatch(/^did:key:z/);
-		});
-
-		it("verifies an mDoc credential", async () => {
-			const client = createClient({ mode: "local" });
-
-			const issued = await client.credentials.issue({
-				type: "IdentityDocument",
-				claims: { givenName: "Bob" },
-				format: "mdoc",
-			});
-
-			const result = await client.credentials.verify({
-				credential: issued.raw,
-			});
-
-			expect(result.valid).toBe(true);
-			expect(result.format).toBe("mdoc");
-			expect(result.claims.givenName).toBe("Bob");
 		});
 
 		it("reports missing required claims", async () => {
@@ -269,27 +233,5 @@ describe("full issue → verify flow", () => {
 		expect(result.claims.givenName).toBe("Marie");
 		expect(result.claims.familyName).toBe("Leclerc");
 		expect(result.claims.verificationLevel).toBe("high");
-	});
-
-	it("round-trips an mDoc credential", async () => {
-		const client = createClient({ mode: "local" });
-
-		const credential = await client.credentials.issue({
-			type: "mDL",
-			claims: {
-				givenName: "Pierre",
-				familyName: "Dubois",
-				category: "B",
-			},
-			format: "mdoc",
-		});
-
-		const result = await client.credentials.verify({
-			credential: credential.raw,
-		});
-
-		expect(result.valid).toBe(true);
-		expect(result.claims.givenName).toBe("Pierre");
-		expect(result.claims.category).toBe("B");
 	});
 });

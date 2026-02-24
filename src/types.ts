@@ -13,7 +13,7 @@ export interface JsonWebKey {
 
 // === Credential Types ===
 
-export type CredentialFormat = "sd-jwt-vc" | "mdoc";
+export type CredentialFormat = "sd-jwt-vc";
 
 export interface CredentialClaims {
 	[key: string]: string | number | boolean | null | CredentialClaims;
@@ -46,7 +46,7 @@ export interface IssuanceRequest {
 export interface IssuedCredential {
 	id: string;
 	format: CredentialFormat;
-	raw: string; // Encoded credential (SD-JWT or CBOR)
+	raw: string; // Encoded credential (SD-JWT)
 	type: string;
 	issuer: string; // Issuer DID
 	holder?: string;

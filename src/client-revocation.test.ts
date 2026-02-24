@@ -109,29 +109,6 @@ describe("client revocation flow", () => {
 				statusListIndex: 42,
 			});
 		});
-
-		it("mDoc includes status list entry in issued credential", async () => {
-			const client = createClient({ mode: "local" });
-			await client.statusList.create({
-				id: "list-1",
-				url: "https://issuer.example.com/status/1",
-			});
-
-			const credential = await client.credentials.issue({
-				type: "mDL",
-				claims: { givenName: "Bob" },
-				format: "mdoc",
-				statusListEntry: {
-					statusListUrl: "https://issuer.example.com/status/1",
-					statusListIndex: 10,
-				},
-			});
-
-			expect(credential.statusListEntry).toEqual({
-				statusListUrl: "https://issuer.example.com/status/1",
-				statusListIndex: 10,
-			});
-		});
 	});
 
 	describe("verify with revocation check (SD-JWT VC)", () => {
@@ -284,68 +261,6 @@ describe("client revocation flow", () => {
 			});
 			expect(resultB.valid).toBe(true);
 			expect(resultB.revocationStatus).toBe("valid");
-		});
-	});
-
-	describe("verify with revocation check (mDoc)", () => {
-		it("verifies as valid when mDoc credential is not revoked", async () => {
-			const client = createClient({ mode: "local" });
-			const list = await client.statusList.create({
-				id: "list-1",
-				url: "https://issuer.example.com/status/1",
-			});
-
-			const credential = await client.credentials.issue({
-				type: "mDL",
-				claims: { givenName: "Alice" },
-				format: "mdoc",
-				statusListEntry: {
-					statusListUrl: "https://issuer.example.com/status/1",
-					statusListIndex: 10,
-				},
-			});
-
-			const result = await client.credentials.verify({
-				credential: credential.raw,
-				checkRevocation: true,
-				statusList: list,
-			});
-
-			expect(result.valid).toBe(true);
-			expect(result.revocationStatus).toBe("valid");
-		});
-
-		it("detects revoked mDoc credential", async () => {
-			const client = createClient({ mode: "local" });
-			await client.statusList.create({
-				id: "list-1",
-				url: "https://issuer.example.com/status/1",
-			});
-
-			const credential = await client.credentials.issue({
-				type: "mDL",
-				claims: { givenName: "Alice" },
-				format: "mdoc",
-				statusListEntry: {
-					statusListUrl: "https://issuer.example.com/status/1",
-					statusListIndex: 10,
-				},
-			});
-
-			await client.statusList.revoke("list-1", 10);
-			const list = await client.statusList.get("list-1");
-
-			const result = await client.credentials.verify({
-				credential: credential.raw,
-				checkRevocation: true,
-				statusList: list!,
-			});
-
-			expect(result.valid).toBe(false);
-			expect(result.revocationStatus).toBe("revoked");
-			expect(result.errors?.some((e) => e.code === ErrorCodes.REVOKED)).toBe(
-				true,
-			);
 		});
 	});
 

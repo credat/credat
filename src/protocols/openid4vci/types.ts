@@ -36,7 +36,7 @@ export interface TokenResponse {
 }
 
 export interface CredentialRequest {
-	format: "vc+sd-jwt" | "mso_mdoc";
+	format: "vc+sd-jwt";
 	credential_identifier?: string;
 	proof?: {
 		proof_type: "jwt";
@@ -45,8 +45,8 @@ export interface CredentialRequest {
 }
 
 export interface CredentialResponse {
-	format: "vc+sd-jwt" | "mso_mdoc";
-	credential: string; // SD-JWT string or base64url-encoded mDoc
+	format: "vc+sd-jwt";
+	credential: string; // SD-JWT string
 }
 
 export interface IssuerMetadata {
@@ -60,7 +60,7 @@ export interface IssuerMetadata {
 }
 
 export interface CredentialConfigurationSupported {
-	format: "vc+sd-jwt" | "mso_mdoc";
+	format: "vc+sd-jwt";
 	credential_definition?: {
 		type: string[];
 		credentialSubject?: Record<
@@ -68,7 +68,6 @@ export interface CredentialConfigurationSupported {
 			{ display?: Array<{ name: string; locale: string }> }
 		>;
 	};
-	doctype?: string; // For mDoc
 	scope?: string;
 }
 

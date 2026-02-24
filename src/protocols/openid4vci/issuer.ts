@@ -1,7 +1,5 @@
 import { bytesToHex, randomBytes } from "@noble/hashes/utils.js";
-import { createMdoc } from "../../credentials/formats/mdoc";
 import { createSdJwtVc } from "../../credentials/formats/sd-jwt-vc";
-import { uint8ArrayToBase64url } from "../../crypto/keys";
 import { ErrorCodes, ProtocolError } from "../../errors";
 import type { CredentialFormat, IssuedCredential } from "../../types";
 import type {
@@ -36,7 +34,7 @@ export class CredentialIssuer {
 	constructor(config: CredentialIssuerConfig) {
 		this.config = {
 			...config,
-			supportedFormats: config.supportedFormats ?? ["sd-jwt-vc", "mdoc"],
+			supportedFormats: config.supportedFormats ?? ["sd-jwt-vc"],
 			tokenExpirySeconds: config.tokenExpirySeconds ?? DEFAULT_TOKEN_EXPIRY,
 			offerExpirySeconds: config.offerExpirySeconds ?? DEFAULT_OFFER_EXPIRY,
 		};
@@ -130,7 +128,7 @@ export class CredentialIssuer {
 
 	async issueCredential(
 		accessToken: string,
-		requestedFormat?: "vc+sd-jwt" | "mso_mdoc",
+		requestedFormat?: "vc+sd-jwt",
 	): Promise<{ response: CredentialResponse; credential: IssuedCredential }> {
 		const token = this.issuedTokens.get(accessToken);
 
@@ -155,62 +153,26 @@ export class CredentialIssuer {
 		this.issuedTokens.delete(accessToken);
 
 		const { params } = token;
-		const format = resolveFormat(requestedFormat, params.format);
 
-		this.validateFormat(format);
+		this.validateFormat("sd-jwt-vc");
 
 		const credentialId = generateCredentialId();
 		const now = new Date();
 
-		if (format === "sd-jwt-vc") {
-			const raw = await createSdJwtVc({
-				issuerPrivateKey: this.config.privateKey,
-				issuerPublicKey: this.config.publicKey,
-				issuerDid: this.config.issuerDid,
-				type: params.credentialType,
-				claims: params.claims,
-				selectiveDisclosure: params.selectiveDisclosure ?? [],
-				holderDid: params.holderDid,
-				expiresAt: params.expiresAt,
-			});
-
-			const credential: IssuedCredential = {
-				id: credentialId,
-				format: "sd-jwt-vc",
-				raw,
-				type: params.credentialType,
-				issuer: this.config.issuerDid,
-				holder: params.holderDid,
-				issuedAt: now,
-				expiresAt: params.expiresAt,
-				claims: params.claims,
-			};
-
-			const response: CredentialResponse = {
-				format: "vc+sd-jwt",
-				credential: raw,
-			};
-
-			return { response, credential };
-		}
-
-		// mDoc format
-		const mdocBytes = await createMdoc({
+		const raw = await createSdJwtVc({
 			issuerPrivateKey: this.config.privateKey,
 			issuerPublicKey: this.config.publicKey,
 			issuerDid: this.config.issuerDid,
-			docType: params.credentialType,
-			nameSpace: `org.iso.18013.5.1.${params.credentialType}`,
+			type: params.credentialType,
 			claims: params.claims,
+			selectiveDisclosure: params.selectiveDisclosure ?? [],
+			holderDid: params.holderDid,
 			expiresAt: params.expiresAt,
 		});
 
-		// Ensure clean byte copy — cbor-x encode() may return a pooled Buffer slice
-		const raw = uint8ArrayToBase64url(new Uint8Array(mdocBytes));
-
 		const credential: IssuedCredential = {
 			id: credentialId,
-			format: "mdoc",
+			format: "sd-jwt-vc",
 			raw,
 			type: params.credentialType,
 			issuer: this.config.issuerDid,
@@ -221,7 +183,7 @@ export class CredentialIssuer {
 		};
 
 		const response: CredentialResponse = {
-			format: "mso_mdoc",
+			format: "vc+sd-jwt",
 			credential: raw,
 		};
 
@@ -240,13 +202,6 @@ export class CredentialIssuer {
 				credential_definition: {
 					type: ["VerifiableCredential"],
 				},
-			};
-		}
-
-		if (this.config.supportedFormats?.includes("mdoc")) {
-			configurations.mdoc = {
-				format: "mso_mdoc",
-				doctype: "org.iso.18013.5.1",
 			};
 		}
 
@@ -277,13 +232,4 @@ function generateRandomToken(): string {
 
 function generateCredentialId(): string {
 	return `urn:uuid:${crypto.randomUUID()}`;
-}
-
-function resolveFormat(
-	requested?: "vc+sd-jwt" | "mso_mdoc",
-	fallback?: CredentialFormat,
-): CredentialFormat {
-	if (requested === "vc+sd-jwt") return "sd-jwt-vc";
-	if (requested === "mso_mdoc") return "mdoc";
-	return fallback ?? "sd-jwt-vc";
 }

@@ -13,7 +13,6 @@ export type {
 } from "./credentials";
 // === Credentials (advanced) ===
 export {
-	createMdoc,
 	createSdJwtVc,
 	createStatusList,
 	createStatusListCredential,
@@ -22,7 +21,6 @@ export {
 	isRevoked,
 	presentSdJwtVc,
 	setRevocationStatus,
-	verifyMdoc,
 	verifySdJwtVc,
 	verifyStatusListCredential,
 } from "./credentials";

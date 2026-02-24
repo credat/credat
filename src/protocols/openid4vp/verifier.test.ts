@@ -34,7 +34,7 @@ function createVerifierConfig(
 async function issueTestCredential(
 	issuerConfig: CredentialIssuerConfig,
 	overrides?: {
-		format?: "vc+sd-jwt" | "mso_mdoc";
+		format?: "vc+sd-jwt";
 		sd?: string[];
 		expiresAt?: Date;
 	},
@@ -64,7 +64,7 @@ async function issueTestCredential(
 
 function buildVpResponse(
 	vpToken: string,
-	format: "vc+sd-jwt" | "mso_mdoc",
+	format: "vc+sd-jwt",
 	state: string,
 ): AuthorizationResponse {
 	const submission: PresentationSubmission = {
@@ -295,15 +295,14 @@ describe("CredentialVerifier", () => {
 	});
 
 	describe("buildPresentationDefinition (static)", () => {
-		it("builds definition for specific format", () => {
+		it("builds definition for sd-jwt-vc format", () => {
 			const pd = CredentialVerifier.buildPresentationDefinition({
-				credentialType: "mDL",
+				credentialType: "IdentityCredential",
 				requiredClaims: ["givenName"],
-				format: "mdoc",
+				format: "sd-jwt-vc",
 			});
 
-			expect(pd.input_descriptors[0]?.format?.mso_mdoc).toBeDefined();
-			expect(pd.input_descriptors[0]?.format?.["vc+sd-jwt"]).toBeUndefined();
+			expect(pd.input_descriptors[0]?.format?.["vc+sd-jwt"]).toBeDefined();
 		});
 	});
 });

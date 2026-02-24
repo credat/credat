@@ -2,7 +2,6 @@ import { explainError } from "./ai/error-explainer";
 import { generateSchema } from "./ai/schema-generator";
 import { generateTestFixtures } from "./ai/test-fixtures";
 import { validateConfig } from "./config";
-import { createMdoc, verifyMdoc } from "./credentials/formats/mdoc";
 import { createSdJwtVc, verifySdJwtVc } from "./credentials/formats/sd-jwt-vc";
 import {
 	createStatusList as createStatusListCore,
@@ -95,46 +94,17 @@ function createCredentialsModule(
 ) {
 	return {
 		async issue(request: IssuanceRequest): Promise<IssuedCredential> {
-			const format = request.format ?? "sd-jwt-vc";
 			const credentialId = `urn:uuid:${crypto.randomUUID()}`;
 			const now = new Date();
 
-			if (format === "sd-jwt-vc") {
-				const raw = await createSdJwtVc({
-					issuerPrivateKey: privateKey,
-					issuerPublicKey: publicKey,
-					issuerDid,
-					type: request.type,
-					claims: request.claims,
-					selectiveDisclosure: request.selectiveDisclosure ?? [],
-					holderDid: request.holder,
-					expiresAt: request.expiresAt,
-					statusListUrl: request.statusListEntry?.statusListUrl,
-					statusListIndex: request.statusListEntry?.statusListIndex,
-				});
-
-				return {
-					id: credentialId,
-					format: "sd-jwt-vc",
-					raw,
-					type: request.type,
-					issuer: issuerDid,
-					holder: request.holder,
-					issuedAt: now,
-					expiresAt: request.expiresAt,
-					claims: request.claims,
-					statusListEntry: request.statusListEntry,
-				};
-			}
-
-			// mDoc
-			const mdocBytes = await createMdoc({
+			const raw = await createSdJwtVc({
 				issuerPrivateKey: privateKey,
 				issuerPublicKey: publicKey,
 				issuerDid,
-				docType: request.type,
-				nameSpace: `org.iso.18013.5.1.${request.type}`,
+				type: request.type,
 				claims: request.claims,
+				selectiveDisclosure: request.selectiveDisclosure ?? [],
+				holderDid: request.holder,
 				expiresAt: request.expiresAt,
 				statusListUrl: request.statusListEntry?.statusListUrl,
 				statusListIndex: request.statusListEntry?.statusListIndex,
@@ -142,8 +112,8 @@ function createCredentialsModule(
 
 			return {
 				id: credentialId,
-				format: "mdoc",
-				raw: uint8ArrayToBase64url(new Uint8Array(mdocBytes)),
+				format: "sd-jwt-vc",
+				raw,
 				type: request.type,
 				issuer: issuerDid,
 				holder: request.holder,
@@ -155,13 +125,7 @@ function createCredentialsModule(
 		},
 
 		async verify(request: VerificationRequest): Promise<VerificationResult> {
-			const isSdJwt = request.credential.includes("~");
-
-			if (isSdJwt) {
-				return verifySdJwtCredential(request, publicKey);
-			}
-
-			return verifyMdocCredential(request, publicKey);
+			return verifySdJwtCredential(request, publicKey);
 		},
 	};
 }
@@ -246,72 +210,6 @@ async function verifySdJwtCredential(
 		expiresAt: result.expiresAt,
 		errors: errors.length > 0 ? errors : undefined,
 		trustChain,
-		revocationStatus,
-	};
-}
-
-async function verifyMdocCredential(
-	request: VerificationRequest,
-	fallbackPublicKey: Uint8Array,
-): Promise<VerificationResult> {
-	const mdocBytes = base64urlToUint8Array(request.credential);
-	const result = await verifyMdoc(mdocBytes, fallbackPublicKey);
-
-	const errors: VerificationError[] = [];
-
-	if (!result.valid && result.errors) {
-		for (const e of result.errors) {
-			errors.push({ code: ErrorCodes.SIGNATURE_INVALID, message: e });
-		}
-	}
-
-	if (result.valid && result.expiresAt && result.expiresAt < new Date()) {
-		errors.push({
-			code: ErrorCodes.EXPIRED,
-			message: "Credential has expired",
-		});
-	}
-
-	if (request.requiredClaims) {
-		const missing = request.requiredClaims.filter((c) => !(c in result.claims));
-		if (missing.length > 0) {
-			errors.push({
-				code: ErrorCodes.MISSING_REQUIRED_CLAIMS,
-				message: `Missing required claims: ${missing.join(", ")}`,
-			});
-		}
-	}
-
-	// Check revocation
-	let revocationStatus: RevocationStatus | undefined;
-	if (request.checkRevocation) {
-		if (result.statusListEntry && request.statusList) {
-			const revoked = isRevokedCore(
-				request.statusList,
-				result.statusListEntry.statusListIndex,
-			);
-			if (revoked) {
-				revocationStatus = "revoked";
-				errors.push({
-					code: ErrorCodes.REVOKED,
-					message: "Credential has been revoked",
-				});
-			} else {
-				revocationStatus = "valid";
-			}
-		} else {
-			revocationStatus = "unknown";
-		}
-	}
-
-	return {
-		valid: result.valid && errors.length === 0,
-		claims: result.claims,
-		issuer: result.issuer,
-		format: "mdoc",
-		issuedAt: result.issuedAt,
-		expiresAt: result.expiresAt,
-		errors: errors.length > 0 ? errors : undefined,
 		revocationStatus,
 	};
 }
@@ -516,50 +414,28 @@ function createAIModule(
 			const credentials: IssuedCredential[] = [];
 
 			for (const claims of claimsArray) {
-				const format = schema.format;
 				const sdClaims = Object.entries(schema.claims)
 					.filter(([, def]) => def.selectiveDisclosure)
 					.map(([name]) => name);
 
-				if (format === "sd-jwt-vc") {
-					const raw = await createSdJwtVc({
-						issuerPrivateKey: privateKey,
-						issuerPublicKey: publicKey,
-						issuerDid,
-						type: schema.type,
-						claims,
-						selectiveDisclosure: sdClaims,
-					});
+				const raw = await createSdJwtVc({
+					issuerPrivateKey: privateKey,
+					issuerPublicKey: publicKey,
+					issuerDid,
+					type: schema.type,
+					claims,
+					selectiveDisclosure: sdClaims,
+				});
 
-					credentials.push({
-						id: `urn:uuid:${crypto.randomUUID()}`,
-						format: "sd-jwt-vc",
-						raw,
-						type: schema.type,
-						issuer: issuerDid,
-						issuedAt: new Date(),
-						claims,
-					});
-				} else {
-					const mdocBytes = await createMdoc({
-						issuerPrivateKey: privateKey,
-						issuerPublicKey: publicKey,
-						issuerDid,
-						docType: schema.type,
-						nameSpace: `org.iso.18013.5.1.${schema.type}`,
-						claims,
-					});
-
-					credentials.push({
-						id: `urn:uuid:${crypto.randomUUID()}`,
-						format: "mdoc",
-						raw: uint8ArrayToBase64url(new Uint8Array(mdocBytes)),
-						type: schema.type,
-						issuer: issuerDid,
-						issuedAt: new Date(),
-						claims,
-					});
-				}
+				credentials.push({
+					id: `urn:uuid:${crypto.randomUUID()}`,
+					format: "sd-jwt-vc",
+					raw,
+					type: schema.type,
+					issuer: issuerDid,
+					issuedAt: new Date(),
+					claims,
+				});
 			}
 
 			return credentials;

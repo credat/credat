@@ -3,19 +3,17 @@ import type { AIConfig, AIGeneratedSchema } from "../types";
 import { callLLM } from "./llm";
 import { extractJson } from "./utils";
 
-const SYSTEM_PROMPT = `You are an expert in eIDAS 2.0 verifiable credentials and the EU Digital Identity Wallet (EUDIW) ecosystem.
+const SYSTEM_PROMPT = `You are an expert in verifiable credentials and digital identity.
 
 Your task is to generate credential schemas based on natural language descriptions. You understand:
 - SD-JWT VC (Selective Disclosure JWT Verifiable Credentials)
-- ISO 18013-5 mDoc (Mobile Document)
-- eIDAS 2.0 Implementing Acts and the Architecture Reference Framework (ARF)
-- EUDIW PID (Person Identification Data) attributes
-- Standard credential types: PID, mDL, diploma, KYC, age verification
+- W3C Verifiable Credentials Data Model 2.0
+- Standard credential types: PID, diploma, KYC, age verification
 
-IMPORTANT eIDAS 2.0 rules:
+IMPORTANT rules:
 - PID attributes: family_name, given_name, birth_date, age_over_18, age_over_nn, nationality, resident_address, resident_city, resident_postal_code, resident_country, gender, birth_place, birth_city, birth_country, birth_state
-- For high assurance (LoA High): assurance_level claim is required
-- SD-JWT VC format is preferred for attestations, mDoc for identity documents
+- For high assurance: assurance_level claim is required
+- SD-JWT VC is the only supported format
 - Claims that could identify a person should be marked for selective disclosure
 - Date fields should use ISO 8601 (YYYY-MM-DD)
 
@@ -32,7 +30,7 @@ Respond ONLY with a valid JSON object matching this structure:
       "selectiveDisclosure": false
     }
   },
-  "format": "sd-jwt-vc or mdoc",
+  "format": "sd-jwt-vc",
   "confidence": 0.95,
   "suggestions": ["Suggestion for improving the schema"],
   "eidasCompliance": {

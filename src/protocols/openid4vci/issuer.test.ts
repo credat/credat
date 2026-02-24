@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { verifyMdoc } from "../../credentials/formats/mdoc";
 import { verifySdJwtVc } from "../../credentials/formats/sd-jwt-vc";
-import { base64urlToUint8Array, generateKeyPair } from "../../crypto/keys";
+import { generateKeyPair } from "../../crypto/keys";
 import { ProtocolError } from "../../errors";
 import { CredentialIssuer, type CredentialIssuerConfig } from "./issuer";
 
@@ -150,34 +149,6 @@ describe("CredentialIssuer", () => {
 			expect(verifyResult.claims.familyName).toBe("Smith");
 		});
 
-		it("issues mDoc credential", async () => {
-			const { offer } = issuer.createOffer({
-				credentialType: "mDL",
-				claims: { givenName: "Bob", familyName: "Jones" },
-				format: "mdoc",
-			});
-
-			const code =
-				offer.grants["urn:ietf:params:oauth:grant-type:pre-authorized_code"][
-					"pre-authorized_code"
-				];
-			const tokenResponse = issuer.exchangePreAuthorizedCode(code);
-			const { response, credential } = await issuer.issueCredential(
-				tokenResponse.access_token,
-				"mso_mdoc",
-			);
-
-			expect(response.format).toBe("mso_mdoc");
-			expect(credential.format).toBe("mdoc");
-			expect(credential.type).toBe("mDL");
-
-			// Verify the issued mDoc credential
-			const mdocBytes = base64urlToUint8Array(response.credential);
-			const verifyResult = await verifyMdoc(mdocBytes, config.publicKey);
-			expect(verifyResult.valid).toBe(true);
-			expect(verifyResult.claims.givenName).toBe("Bob");
-		});
-
 		it("rejects invalid access token", async () => {
 			await expect(issuer.issueCredential("invalid-token")).rejects.toThrow(
 				ProtocolError,
@@ -223,28 +194,6 @@ describe("CredentialIssuer", () => {
 				shortLivedIssuer.issueCredential(tokenResponse.access_token),
 			).rejects.toThrow(ProtocolError);
 		});
-
-		it("rejects unsupported format", async () => {
-			const sdJwtOnlyIssuer = new CredentialIssuer({
-				...config,
-				supportedFormats: ["sd-jwt-vc"],
-			});
-
-			const { offer } = sdJwtOnlyIssuer.createOffer({
-				credentialType: "mDL",
-				claims: { givenName: "Alice" },
-			});
-
-			const code =
-				offer.grants["urn:ietf:params:oauth:grant-type:pre-authorized_code"][
-					"pre-authorized_code"
-				];
-			const tokenResponse = sdJwtOnlyIssuer.exchangePreAuthorizedCode(code);
-
-			await expect(
-				sdJwtOnlyIssuer.issueCredential(tokenResponse.access_token, "mso_mdoc"),
-			).rejects.toThrow(ProtocolError);
-		});
 	});
 
 	describe("getMetadata", () => {
@@ -259,7 +208,6 @@ describe("CredentialIssuer", () => {
 			expect(
 				metadata.credential_configurations_supported["sd-jwt-vc"],
 			).toBeDefined();
-			expect(metadata.credential_configurations_supported.mdoc).toBeDefined();
 		});
 	});
 });

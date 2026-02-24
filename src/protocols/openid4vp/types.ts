@@ -14,7 +14,6 @@ export interface InputDescriptor {
 	purpose?: string;
 	format?: {
 		"vc+sd-jwt"?: { alg: string[] };
-		mso_mdoc?: { alg: string[] };
 	};
 	constraints: {
 		fields: FieldConstraint[];
@@ -39,7 +38,7 @@ export interface AuthorizationRequest {
 }
 
 export interface AuthorizationResponse {
-	vp_token: string; // SD-JWT presentation or base64url mDoc
+	vp_token: string; // SD-JWT presentation
 	presentation_submission: PresentationSubmission;
 	state: string;
 }
@@ -49,7 +48,7 @@ export interface PresentationSubmission {
 	definition_id: string;
 	descriptor_map: Array<{
 		id: string;
-		format: "vc+sd-jwt" | "mso_mdoc";
+		format: "vc+sd-jwt";
 		path: string; // e.g. "$"
 	}>;
 }

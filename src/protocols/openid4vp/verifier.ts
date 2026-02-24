@@ -1,7 +1,6 @@
 import { bytesToHex, randomBytes } from "@noble/hashes/utils.js";
-import { verifyMdoc } from "../../credentials/formats/mdoc";
 import { verifySdJwtVc } from "../../credentials/formats/sd-jwt-vc";
-import { base64urlToUint8Array, jwkToPublicKey } from "../../crypto/keys";
+import { jwkToPublicKey } from "../../crypto/keys";
 import { resolveDID } from "../../did/resolver";
 import { ErrorCodes, ProtocolError } from "../../errors";
 import type {
@@ -116,10 +115,6 @@ export class CredentialVerifier {
 			return this.verifySdJwtPresentation(vp_token, pending, issuerPublicKey);
 		}
 
-		if (format === "mso_mdoc") {
-			return this.verifyMdocPresentation(vp_token, pending, issuerPublicKey);
-		}
-
 		throw new ProtocolError(
 			ErrorCodes.OPENID4VP_FAILED,
 			`Unsupported presentation format: ${format}`,
@@ -218,85 +213,6 @@ export class CredentialVerifier {
 		};
 	}
 
-	private async verifyMdocPresentation(
-		vpToken: string,
-		pending: PendingRequest,
-		issuerPublicKey?: Uint8Array,
-	): Promise<VerifiedPresentation> {
-		const mdocBytes = base64urlToUint8Array(vpToken);
-		const pubKey = issuerPublicKey;
-
-		if (!pubKey) {
-			return {
-				valid: false,
-				format: "mdoc",
-				claims: {},
-				issuer: "",
-				issuedAt: new Date(),
-				errors: ["Issuer public key required for mDoc verification"],
-				requestedClaimsPresent: false,
-			};
-		}
-
-		const result = await verifyMdoc(mdocBytes, pubKey);
-
-		if (!result.valid) {
-			return {
-				valid: false,
-				format: "mdoc",
-				claims: {},
-				issuer: result.issuer,
-				issuedAt: result.issuedAt,
-				errors: result.errors,
-				requestedClaimsPresent: false,
-			};
-		}
-
-		// Check expiry
-		if (result.expiresAt && result.expiresAt < new Date()) {
-			return {
-				valid: false,
-				format: "mdoc",
-				claims: result.claims,
-				issuer: result.issuer,
-				issuedAt: result.issuedAt,
-				expiresAt: result.expiresAt,
-				errors: ["Credential has expired"],
-				requestedClaimsPresent: false,
-			};
-		}
-
-		// Check trusted issuers
-		if (this.config.trustedIssuers && this.config.trustedIssuers.length > 0) {
-			if (!this.config.trustedIssuers.includes(result.issuer)) {
-				return {
-					valid: false,
-					format: "mdoc",
-					claims: result.claims,
-					issuer: result.issuer,
-					issuedAt: result.issuedAt,
-					expiresAt: result.expiresAt,
-					errors: [`Issuer ${result.issuer} is not trusted`],
-					requestedClaimsPresent: false,
-				};
-			}
-		}
-
-		const requestedClaimsPresent = pending.params.requiredClaims.every(
-			(claim) => claim in result.claims,
-		);
-
-		return {
-			valid: true,
-			format: "mdoc",
-			claims: result.claims,
-			issuer: result.issuer,
-			issuedAt: result.issuedAt,
-			expiresAt: result.expiresAt,
-			requestedClaimsPresent,
-		};
-	}
-
 	private async resolveIssuerKeyFromSdJwt(
 		sdJwt: string,
 	): Promise<Uint8Array | null> {
@@ -337,12 +253,7 @@ function buildPresentationDefinition(
 ): PresentationDefinition {
 	const formatSpec: InputDescriptor["format"] = {};
 
-	if (!params.format || params.format === "sd-jwt-vc") {
-		formatSpec["vc+sd-jwt"] = { alg: ["ES256"] };
-	}
-	if (!params.format || params.format === "mdoc") {
-		formatSpec.mso_mdoc = { alg: ["ES256"] };
-	}
+	formatSpec["vc+sd-jwt"] = { alg: ["ES256"] };
 
 	const fields = params.requiredClaims.map((claim) => ({
 		path: [`$.${claim}`, `$.credentialSubject.${claim}`],

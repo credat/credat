@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { createClient } from "./client";
-import { verifyMdoc } from "./credentials/formats/mdoc";
 import { verifySdJwtVc } from "./credentials/formats/sd-jwt-vc";
 import { verifyStatusListCredential } from "./credentials/status-list";
 import {
@@ -336,27 +335,6 @@ describe("edge cases", () => {
 		expect(result.claims.familyName).toBe("Müller");
 		expect(result.claims.city).toBe("東京");
 		expect(result.claims.emoji).toBe("🇫🇷");
-	});
-
-	it("handles unicode claims in mDoc", async () => {
-		const client = createClient({ mode: "local" });
-
-		const credential = await client.credentials.issue({
-			type: "mDL",
-			claims: {
-				givenName: "José",
-				familyName: "García",
-			},
-			format: "mdoc",
-		});
-
-		const result = await client.credentials.verify({
-			credential: credential.raw,
-		});
-
-		expect(result.valid).toBe(true);
-		expect(result.claims.givenName).toBe("José");
-		expect(result.claims.familyName).toBe("García");
 	});
 
 	it("handles nested object claims", async () => {
