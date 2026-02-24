@@ -23,13 +23,13 @@ describe("presentCredentials", () => {
 
 		const presentation = await presentCredentials({
 			challenge,
-			delegation: delegation.raw,
+			delegation: delegation.token,
 			agent,
 		});
 
 		expect(presentation.type).toBe("credat:presentation");
 		expect(presentation.nonce).toBe(challenge.nonce);
-		expect(presentation.delegation).toBe(delegation.raw);
+		expect(presentation.delegation).toBe(delegation.token);
 		expect(presentation.proof).toBeDefined();
 		expect(presentation.from).toBe(agent.did);
 	});

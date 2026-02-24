@@ -31,7 +31,11 @@ async function main() {
 
 	console.log("Owner DID:", ownerDid);
 	console.log("Owner algorithm:", ownerKeyPair.algorithm);
-	console.log("Owner public key length:", ownerKeyPair.publicKey.length, "bytes\n");
+	console.log(
+		"Owner public key length:",
+		ownerKeyPair.publicKey.length,
+		"bytes\n",
+	);
 
 	// ── Step 2: Create an agent ──
 	console.log("=== Step 2: Create agent identity ===\n");
@@ -43,7 +47,7 @@ async function main() {
 	});
 
 	console.log("Agent DID:", agent.did);
-	console.log("Agent algorithm:", agent.algorithm);
+	console.log("Agent algorithm:", agent.keyPair.algorithm);
 	console.log("Agent DID Document ID:", agent.didDocument.id, "\n");
 
 	// ── Step 3: Delegate permissions ──
@@ -52,11 +56,7 @@ async function main() {
 	const delegation = await delegate({
 		agent: agent.did,
 		owner: ownerDid,
-		ownerKeyPair: {
-			algorithm: ownerKeyPair.algorithm,
-			publicKey: ownerKeyPair.publicKey,
-			privateKey: ownerKeyPair.privateKey,
-		},
+		ownerKeyPair,
 		scopes: ["email:read", "calendar:read", "calendar:write"],
 		constraints: {
 			maxTransactionValue: 1000,
@@ -68,42 +68,52 @@ async function main() {
 
 	console.log("Delegation credential issued");
 	console.log("Scopes:", delegation.claims.scopes);
-	console.log("Constraints:", JSON.stringify(delegation.claims.constraints, null, 2));
+	console.log(
+		"Constraints:",
+		JSON.stringify(delegation.claims.constraints, null, 2),
+	);
 	console.log("Valid until:", delegation.claims.validUntil);
-	console.log("Raw token length:", delegation.raw.length, "chars\n");
+	console.log("Token length:", delegation.token.length, "chars\n");
 
 	// ── Step 4: Verify the delegation ──
 	console.log("=== Step 4: Verify delegation ===\n");
 
-	const result = await verifyDelegation(delegation.raw, {
+	const result = await verifyDelegation(delegation.token, {
 		ownerPublicKey: ownerKeyPair.publicKey,
-		algorithm: ownerKeyPair.algorithm,
 	});
 
 	console.log("Verification valid:", result.valid);
-	console.log("Verified agent:", result.agent);
-	console.log("Verified owner:", result.owner);
-	console.log("Verified scopes:", result.scopes);
-	console.log("Verified constraints:", JSON.stringify(result.constraints, null, 2));
-	console.log();
 
-	// ── Step 5: Check scopes ──
-	console.log("=== Step 5: Scope checks ===\n");
+	if (result.valid) {
+		console.log("Verified agent:", result.agent);
+		console.log("Verified owner:", result.owner);
+		console.log("Verified scopes:", result.scopes);
+		console.log(
+			"Verified constraints:",
+			JSON.stringify(result.constraints, null, 2),
+		);
+		console.log();
 
-	console.log('hasScope("email:read"):', hasScope(result, "email:read"));
-	console.log('hasScope("email:write"):', hasScope(result, "email:write"));
-	console.log(
-		'hasAnyScope(["files:read", "calendar:write"]):',
-		hasAnyScope(result, ["files:read", "calendar:write"]),
-	);
-	console.log(
-		'hasAllScopes(["email:read", "calendar:read"]):',
-		hasAllScopes(result, ["email:read", "calendar:read"]),
-	);
-	console.log(
-		'hasAllScopes(["email:read", "files:delete"]):',
-		hasAllScopes(result, ["email:read", "files:delete"]),
-	);
+		// ── Step 5: Check scopes ──
+		console.log("=== Step 5: Scope checks ===\n");
+
+		console.log('hasScope("email:read"):', hasScope(result, "email:read"));
+		console.log('hasScope("email:write"):', hasScope(result, "email:write"));
+		console.log(
+			'hasAnyScope(["files:read", "calendar:write"]):',
+			hasAnyScope(result, ["files:read", "calendar:write"]),
+		);
+		console.log(
+			'hasAllScopes(["email:read", "calendar:read"]):',
+			hasAllScopes(result, ["email:read", "calendar:read"]),
+		);
+		console.log(
+			'hasAllScopes(["email:read", "files:delete"]):',
+			hasAllScopes(result, ["email:read", "files:delete"]),
+		);
+	} else {
+		console.log("Verification failed:", result.errors);
+	}
 
 	console.log("\nDone.");
 }

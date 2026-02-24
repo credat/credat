@@ -12,7 +12,7 @@ export {
 	decodeStatusList,
 	encodeStatusList,
 	isRevoked,
-	presentSdJwtVc,
+	selectDisclosures,
 	setRevocationStatus,
 	verifySdJwtVc,
 	verifyStatusListCredential,

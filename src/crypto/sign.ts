@@ -2,6 +2,8 @@ import { ed25519 } from "@noble/curves/ed25519.js";
 import { p256 } from "@noble/curves/nist.js";
 import type { Algorithm } from "./keys";
 
+// Both p256.sign() and ed25519.sign() handle hashing internally.
+// Do NOT pre-hash the payload — that would double-hash and produce invalid signatures.
 export function sign(
 	payload: Uint8Array,
 	privateKey: Uint8Array,
@@ -33,8 +35,11 @@ export function verifySignature(
 			return ed25519.verify(signature, payload, publicKey);
 		}
 
-		return false;
-	} catch {
+		throw new Error(`Unsupported algorithm: ${algorithm}`);
+	} catch (error) {
+		if (error instanceof Error && error.message.startsWith("Unsupported")) {
+			throw error;
+		}
 		return false;
 	}
 }

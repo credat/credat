@@ -44,7 +44,7 @@ describe("E2E: Full delegation + handshake flow", () => {
 		// 5. Agent presents credentials
 		const presentation = await presentCredentials({
 			challenge,
-			delegation: delegation.raw,
+			delegation: delegation.token,
 			agent,
 		});
 
@@ -94,7 +94,7 @@ describe("E2E: Full delegation + handshake flow", () => {
 		const challenge = createChallenge({ from: "did:web:service.example.com" });
 		const presentation = await presentCredentials({
 			challenge,
-			delegation: delegation.raw,
+			delegation: delegation.token,
 			agent,
 		});
 
@@ -133,7 +133,7 @@ describe("E2E: Full delegation + handshake flow", () => {
 		const challenge = createChallenge({ from: "did:web:service.example.com" });
 		const presentation = await presentCredentials({
 			challenge,
-			delegation: delegation.raw,
+			delegation: delegation.token,
 			agent,
 		});
 
@@ -150,6 +150,45 @@ describe("E2E: Full delegation + handshake flow", () => {
 		expect(result.owner).toBe(ownerDid);
 		expect(result.scopes).toContain("read:data");
 		expect(result.scopes).toContain("write:data");
+	});
+
+	it("full EdDSA flow: EdDSA owner + EdDSA agent", async () => {
+		const ownerKeyPair = generateKeyPair("EdDSA");
+		const ownerDid = createDidWeb("owner-eddsa.example.com");
+
+		const agent = await createAgent({
+			domain: "agent-eddsa.example.com",
+			algorithm: "EdDSA",
+		});
+
+		expect(agent.keyPair.algorithm).toBe("EdDSA");
+
+		const delegation = await delegate({
+			agent: agent.did,
+			owner: ownerDid,
+			ownerKeyPair,
+			scopes: ["read:data", "sign:tx"],
+		});
+
+		const challenge = createChallenge({ from: "did:web:service.example.com" });
+		const presentation = await presentCredentials({
+			challenge,
+			delegation: delegation.token,
+			agent,
+		});
+
+		const result = await verifyPresentation(presentation, {
+			challenge,
+			ownerPublicKey: ownerKeyPair.publicKey,
+			agentPublicKey: agent.keyPair.publicKey,
+			agentAlgorithm: "EdDSA",
+		});
+
+		expect(result.valid).toBe(true);
+		expect(result.agent).toBe(agent.did);
+		expect(result.owner).toBe(ownerDid);
+		expect(result.scopes).toContain("read:data");
+		expect(result.scopes).toContain("sign:tx");
 	});
 
 	it("replay attack: mismatched challenge nonce is rejected", async () => {
@@ -170,7 +209,7 @@ describe("E2E: Full delegation + handshake flow", () => {
 		});
 		const presentation = await presentCredentials({
 			challenge: originalChallenge,
-			delegation: delegation.raw,
+			delegation: delegation.token,
 			agent,
 		});
 

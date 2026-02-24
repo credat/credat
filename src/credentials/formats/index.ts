@@ -1,8 +1,11 @@
+export type { SdJwtVcCreateOptions, SdJwtVcVerifyResult } from "./sd-jwt-vc";
+export { createSdJwtVc, selectDisclosures, verifySdJwtVc } from "./sd-jwt-vc";
+
 export type {
 	CreateStatusListCredentialOptions,
 	CreateStatusListOptions,
 	VerifyStatusListCredentialResult,
-} from "../status-list";
+} from "./status-list";
 export {
 	createStatusList,
 	createStatusListCredential,
@@ -11,6 +14,4 @@ export {
 	isRevoked,
 	setRevocationStatus,
 	verifyStatusListCredential,
-} from "../status-list";
-export type { SdJwtVcCreateOptions, SdJwtVcVerifyResult } from "./sd-jwt-vc";
-export { createSdJwtVc, presentSdJwtVc, verifySdJwtVc } from "./sd-jwt-vc";
+} from "./status-list";

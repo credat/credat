@@ -3,6 +3,7 @@ import { createAgent } from "../agent/create";
 import { generateKeyPair } from "../crypto/keys";
 import { delegate } from "../delegation/issue";
 import { createDidWeb } from "../did/methods/web";
+import { ErrorCodes } from "../errors";
 import { createChallenge } from "./challenge";
 import { presentCredentials } from "./present";
 import { verifyPresentation } from "./verify";
@@ -24,7 +25,7 @@ describe("verifyPresentation", () => {
 
 		const presentation = await presentCredentials({
 			challenge,
-			delegation: delegation.raw,
+			delegation: delegation.token,
 			agent,
 		});
 
@@ -59,7 +60,7 @@ describe("verifyPresentation", () => {
 
 		const presentation = await presentCredentials({
 			challenge,
-			delegation: delegation.raw,
+			delegation: delegation.token,
 			agent,
 		});
 
@@ -71,7 +72,7 @@ describe("verifyPresentation", () => {
 
 		expect(result.valid).toBe(false);
 		expect(
-			result.errors.some((e) => e.code === "HANDSHAKE_INVALID_NONCE"),
+			result.errors.some((e) => e.code === ErrorCodes.HANDSHAKE_INVALID_NONCE),
 		).toBe(true);
 	});
 
@@ -92,7 +93,7 @@ describe("verifyPresentation", () => {
 
 		const presentation = await presentCredentials({
 			challenge,
-			delegation: delegation.raw,
+			delegation: delegation.token,
 			agent,
 		});
 
@@ -103,5 +104,78 @@ describe("verifyPresentation", () => {
 		});
 
 		expect(result.valid).toBe(false);
+	});
+
+	it("rejects expired challenge (older than 5 minutes)", async () => {
+		const agent = await createAgent({ domain: "agent.example.com" });
+		const ownerKeyPair = generateKeyPair("ES256");
+		const ownerDid = createDidWeb("owner.example.com");
+
+		const delegation = await delegate({
+			agent: agent.did,
+			owner: ownerDid,
+			ownerKeyPair,
+			scopes: ["book:travel"],
+		});
+
+		const challenge = createChallenge({ from: "did:web:service.example.com" });
+		// Backdate challenge by 6 minutes
+		challenge.timestamp = new Date(Date.now() - 6 * 60 * 1000).toISOString();
+
+		const presentation = await presentCredentials({
+			challenge,
+			delegation: delegation.token,
+			agent,
+		});
+
+		const result = await verifyPresentation(presentation, {
+			challenge,
+			ownerPublicKey: ownerKeyPair.publicKey,
+			agentPublicKey: agent.keyPair.publicKey,
+		});
+
+		expect(result.valid).toBe(false);
+		expect(
+			result.errors.some((e) => e.code === ErrorCodes.HANDSHAKE_EXPIRED),
+		).toBe(true);
+	});
+
+	it("rejects presenter DID mismatch with delegation agent", async () => {
+		const agent = await createAgent({ domain: "agent.example.com" });
+		const impersonator = await createAgent({
+			domain: "impersonator.example.com",
+		});
+		const ownerKeyPair = generateKeyPair("ES256");
+		const ownerDid = createDidWeb("owner.example.com");
+
+		// Delegation is for agent, but impersonator will present it
+		const delegation = await delegate({
+			agent: agent.did,
+			owner: ownerDid,
+			ownerKeyPair,
+			scopes: ["book:travel"],
+		});
+
+		const challenge = createChallenge({ from: "did:web:service.example.com" });
+
+		// Impersonator signs the nonce and presents agent's delegation
+		const presentation = await presentCredentials({
+			challenge,
+			delegation: delegation.token,
+			agent: impersonator,
+		});
+
+		const result = await verifyPresentation(presentation, {
+			challenge,
+			ownerPublicKey: ownerKeyPair.publicKey,
+			agentPublicKey: impersonator.keyPair.publicKey,
+		});
+
+		expect(result.valid).toBe(false);
+		expect(
+			result.errors.some(
+				(e) => e.code === ErrorCodes.HANDSHAKE_VERIFICATION_FAILED,
+			),
+		).toBe(true);
 	});
 });

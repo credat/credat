@@ -1,4 +1,3 @@
-import type { Algorithm } from "../crypto/keys";
 import { uint8ArrayToBase64url } from "../crypto/keys";
 import { sign } from "../crypto/sign";
 import type {
@@ -22,7 +21,7 @@ export async function presentCredentials(
 	const signature = sign(
 		nonceBytes,
 		agent.keyPair.privateKey,
-		agent.keyPair.algorithm as Algorithm,
+		agent.keyPair.algorithm,
 	);
 
 	return {

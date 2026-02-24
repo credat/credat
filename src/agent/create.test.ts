@@ -10,7 +10,7 @@ describe("createAgent", () => {
 		expect(agent.didDocument.id).toBe("did:web:agent.example.com");
 		expect(agent.keyPair.publicKey).toBeInstanceOf(Uint8Array);
 		expect(agent.keyPair.privateKey).toBeInstanceOf(Uint8Array);
-		expect(agent.algorithm).toBe("ES256");
+		expect(agent.keyPair.algorithm).toBe("ES256");
 	});
 
 	it("creates agent with path", async () => {
@@ -27,16 +27,7 @@ describe("createAgent", () => {
 			domain: "agent.example.com",
 			algorithm: "EdDSA",
 		});
-		expect(agent.algorithm).toBe("EdDSA");
 		expect(agent.keyPair.algorithm).toBe("EdDSA");
-	});
-
-	it("creates agent with ES256K algorithm", async () => {
-		const agent = await createAgent({
-			domain: "agent.example.com",
-			algorithm: "ES256K",
-		});
-		expect(agent.algorithm).toBe("ES256K");
 	});
 
 	it("persists agent to storage when provided", async () => {

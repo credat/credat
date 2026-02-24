@@ -54,7 +54,7 @@ describe("resolveDidWeb", () => {
 		global.fetch = vi.fn().mockResolvedValue({
 			ok: true,
 			json: () => Promise.resolve(mockDocument),
-		}) as any;
+		}) as unknown as typeof fetch;
 
 		const result = await resolveDidWeb("did:web:example.com");
 		expect(result.didDocument).toEqual(mockDocument);
@@ -67,7 +67,7 @@ describe("resolveDidWeb", () => {
 		global.fetch = vi.fn().mockResolvedValue({
 			ok: false,
 			status: 404,
-		}) as any;
+		}) as unknown as typeof fetch;
 
 		const result = await resolveDidWeb("did:web:notfound.com");
 		expect(result.didDocument).toBeNull();

@@ -1,3 +1,8 @@
-export { createDidKey, resolveDidKey } from "./methods/key";
-export { createDidWeb, didWebToUrl, resolveDidWeb } from "./methods/web";
+export {
+	createDidKey,
+	createDidWeb,
+	didWebToUrl,
+	resolveDidKey,
+	resolveDidWeb,
+} from "./methods";
 export { resolveDID } from "./resolver";

@@ -1,4 +1,4 @@
-interface HasScopes {
+export interface HasScopes {
 	scopes: string[];
 }
 

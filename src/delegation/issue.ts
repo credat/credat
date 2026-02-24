@@ -7,7 +7,7 @@ import type {
 	DelegationCredential,
 } from "../types";
 
-const DELEGATION_VC_TYPE = "CreditDelegationCredential";
+const DELEGATION_VC_TYPE = "AgentDelegationCredential";
 
 export async function delegate(
 	options: DelegateOptions,
@@ -32,11 +32,11 @@ export async function delegate(
 	const claims: CredentialClaims = {
 		agent,
 		owner,
-		scopes: scopes as unknown as CredentialClaims,
+		scopes,
 	};
 
 	if (constraints) {
-		claims.constraints = constraints as unknown as CredentialClaims;
+		claims.constraints = constraints as CredentialClaims;
 	}
 
 	if (validFrom) {
@@ -52,17 +52,17 @@ export async function delegate(
 		selectiveDisclosure.push("constraints");
 	}
 
-	const raw = await createSdJwtVc({
+	const token = await createSdJwtVc({
 		issuerPrivateKey: ownerKeyPair.privateKey,
 		issuerPublicKey: ownerKeyPair.publicKey,
 		issuerDid: owner,
 		type: DELEGATION_VC_TYPE,
 		claims,
 		selectiveDisclosure,
+		algorithm: ownerKeyPair.algorithm,
 		holderDid: agent,
 		expiresAt: validUntil ? new Date(validUntil) : undefined,
-		statusListUrl: options.statusListUrl,
-		statusListIndex: options.statusListIndex,
+		statusList: options.statusList,
 	});
 
 	const delegationClaims: DelegationClaims = {
@@ -84,7 +84,7 @@ export async function delegate(
 	}
 
 	return {
-		raw,
+		token,
 		claims: delegationClaims,
 	};
 }

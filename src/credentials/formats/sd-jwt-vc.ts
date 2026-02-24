@@ -1,11 +1,13 @@
 import { sha256 } from "@noble/hashes/sha2.js";
 import { randomBytes } from "@noble/hashes/utils.js";
+import type { Algorithm } from "../../crypto/keys";
 import {
 	base64urlToUint8Array,
 	uint8ArrayToBase64url,
 } from "../../crypto/keys";
 import { sign, verifySignature } from "../../crypto/sign";
-import type { CredentialClaims } from "../../types";
+import { CredentialError, ErrorCodes } from "../../errors";
+import type { CredentialClaims, CredentialClaimValue } from "../../types";
 import { base64urlToJson, jsonToBase64url } from "../utils";
 
 export interface SdJwtVcCreateOptions {
@@ -15,10 +17,10 @@ export interface SdJwtVcCreateOptions {
 	type: string;
 	claims: CredentialClaims;
 	selectiveDisclosure: string[];
+	algorithm?: Algorithm;
 	holderDid?: string;
 	expiresAt?: Date;
-	statusListUrl?: string;
-	statusListIndex?: number;
+	statusList?: { url: string; index: number };
 }
 
 export interface SdJwtVcVerifyResult {
@@ -45,8 +47,14 @@ interface Disclosure {
 export async function createSdJwtVc(
 	options: SdJwtVcCreateOptions,
 ): Promise<string> {
-	const { issuerPrivateKey, issuerDid, type, claims, selectiveDisclosure } =
-		options;
+	const {
+		issuerPrivateKey,
+		issuerDid,
+		type,
+		claims,
+		selectiveDisclosure,
+		algorithm = "ES256",
+	} = options;
 
 	// Create disclosures for SD claims
 	const disclosures: Disclosure[] = [];
@@ -85,27 +93,27 @@ export async function createSdJwtVc(
 		payload.exp = Math.floor(options.expiresAt.getTime() / 1000);
 	}
 
-	if (options.statusListUrl != null && options.statusListIndex != null) {
+	if (options.statusList) {
 		payload.status = {
 			status_list: {
-				idx: options.statusListIndex,
-				uri: options.statusListUrl,
+				idx: options.statusList.index,
+				uri: options.statusList.url,
 			},
 		};
 	}
 
 	// Build JWT header (draft-14: typ = dc+sd-jwt)
 	const header = {
-		alg: "ES256",
+		alg: algorithm,
 		typ: "dc+sd-jwt",
-		kid: `${issuerDid}#key-1`,
+		kid: `${issuerDid}#key-0`,
 	};
 
 	// Encode and sign JWT
 	const headerB64 = jsonToBase64url(header);
 	const payloadB64 = jsonToBase64url(payload);
 	const signingInput = new TextEncoder().encode(`${headerB64}.${payloadB64}`);
-	const signature = sign(signingInput, issuerPrivateKey, "ES256");
+	const signature = sign(signingInput, issuerPrivateKey, algorithm);
 	const signatureB64 = uint8ArrayToBase64url(signature);
 
 	const jwt = `${headerB64}.${payloadB64}.${signatureB64}`;
@@ -121,12 +129,20 @@ export async function verifySdJwtVc(
 	sdJwt: string,
 	issuerPublicKey: Uint8Array,
 ): Promise<SdJwtVcVerifyResult> {
+	// Parse phase — malformed input is an expected error
+	let jwt: string;
+	let disclosureStrings: string[];
+	let headerB64: string;
+	let payloadB64: string;
+	let signatureBytes: Uint8Array;
+	let header: Record<string, unknown>;
+	let payload: Record<string, unknown>;
+
 	try {
 		const parts = sdJwt.split("~");
-		const jwt = parts[0]!;
-		const disclosureStrings = parts.slice(1).filter((d) => d.length > 0);
+		jwt = parts[0] ?? "";
+		disclosureStrings = parts.slice(1).filter((d) => d.length > 0);
 
-		// Parse JWT
 		const jwtParts = jwt.split(".");
 		if (jwtParts.length !== 3) {
 			return {
@@ -139,91 +155,11 @@ export async function verifySdJwtVc(
 			};
 		}
 
-		const payload = base64urlToJson(jwtParts[1]!);
-		const signatureBytes = base64urlToUint8Array(jwtParts[2]!);
-
-		// Verify signature
-		const signingInput = new TextEncoder().encode(
-			`${jwtParts[0]}.${jwtParts[1]}`,
-		);
-		const signatureValid = verifySignature(
-			signingInput,
-			signatureBytes,
-			issuerPublicKey,
-			"ES256",
-		);
-
-		if (!signatureValid) {
-			return {
-				valid: false,
-				claims: {},
-				issuer: "",
-				format: "sd-jwt-vc",
-				issuedAt: new Date(),
-				errors: ["Invalid signature"],
-			};
-		}
-
-		// Process disclosures
-		const claims: CredentialClaims = {};
-		const sdDigests = (payload._sd as string[]) ?? [];
-
-		// Add plain claims (everything except reserved fields)
-		const reserved = new Set([
-			"iss",
-			"iat",
-			"exp",
-			"vct",
-			"sub",
-			"_sd",
-			"_sd_alg",
-			"cnf",
-			"status",
-		]);
-		for (const [key, value] of Object.entries(payload)) {
-			if (!reserved.has(key)) {
-				claims[key] = value as string | number | boolean;
-			}
-		}
-
-		// Process each disclosure
-		for (const disclosureStr of disclosureStrings) {
-			const disclosureJson = JSON.parse(
-				new TextDecoder().decode(base64urlToUint8Array(disclosureStr)),
-			) as [string, string, unknown];
-			const [, claimName, claimValue] = disclosureJson;
-
-			// Verify disclosure digest is in _sd array
-			const digest = computeDisclosureDigest(disclosureStr);
-			if (sdDigests.includes(digest)) {
-				claims[claimName] = claimValue as string | number | boolean;
-			}
-		}
-
-		// Extract status list entry if present
-		const statusPayload = payload.status as
-			| { status_list?: { idx?: number; uri?: string } }
-			| undefined;
-		const statusListEntry =
-			statusPayload?.status_list?.uri != null &&
-			statusPayload?.status_list?.idx != null
-				? {
-						statusListUrl: statusPayload.status_list.uri,
-						statusListIndex: statusPayload.status_list.idx,
-					}
-				: undefined;
-
-		return {
-			valid: true,
-			claims,
-			issuer: payload.iss as string,
-			format: "sd-jwt-vc",
-			issuedAt: new Date((payload.iat as number) * 1000),
-			expiresAt: payload.exp
-				? new Date((payload.exp as number) * 1000)
-				: undefined,
-			statusListEntry,
-		};
+		[headerB64, payloadB64] = jwtParts as [string, string, string];
+		const signatureB64 = jwtParts[2] ?? "";
+		header = base64urlToJson(headerB64);
+		payload = base64urlToJson(payloadB64);
+		signatureBytes = base64urlToUint8Array(signatureB64);
 	} catch (error) {
 		return {
 			valid: false,
@@ -231,25 +167,131 @@ export async function verifySdJwtVc(
 			issuer: "",
 			format: "sd-jwt-vc",
 			issuedAt: new Date(),
-			errors: [(error as Error).message],
+			errors: [`Malformed SD-JWT: ${(error as Error).message}`],
 		};
 	}
+
+	// Verify phase — let unexpected errors propagate
+	const algorithm: Algorithm = header.alg === "EdDSA" ? "EdDSA" : "ES256";
+
+	const signingInput = new TextEncoder().encode(`${headerB64}.${payloadB64}`);
+	const signatureValid = verifySignature(
+		signingInput,
+		signatureBytes,
+		issuerPublicKey,
+		algorithm,
+	);
+
+	if (!signatureValid) {
+		return {
+			valid: false,
+			claims: {},
+			issuer: "",
+			format: "sd-jwt-vc",
+			issuedAt: new Date(),
+			errors: ["Invalid signature"],
+		};
+	}
+
+	// Process disclosures
+	const claims: CredentialClaims = {};
+	const sdDigests = (payload._sd as string[]) ?? [];
+
+	// Add plain claims (everything except reserved fields)
+	const reserved = new Set([
+		"iss",
+		"iat",
+		"exp",
+		"vct",
+		"sub",
+		"_sd",
+		"_sd_alg",
+		"cnf",
+		"status",
+	]);
+	for (const [key, value] of Object.entries(payload)) {
+		if (!reserved.has(key)) {
+			claims[key] = value as CredentialClaimValue;
+		}
+	}
+
+	// Process each disclosure
+	for (const disclosureStr of disclosureStrings) {
+		let disclosureJson: [string, string, unknown];
+		try {
+			disclosureJson = JSON.parse(
+				new TextDecoder().decode(base64urlToUint8Array(disclosureStr)),
+			) as [string, string, unknown];
+		} catch {
+			return {
+				valid: false,
+				claims: {},
+				issuer: "",
+				format: "sd-jwt-vc",
+				issuedAt: new Date(),
+				errors: ["Malformed disclosure in SD-JWT"],
+			};
+		}
+		const [, claimName, claimValue] = disclosureJson;
+
+		// Verify disclosure digest is in _sd array
+		const digest = computeDisclosureDigest(disclosureStr);
+		if (sdDigests.includes(digest)) {
+			claims[claimName] = claimValue as CredentialClaimValue;
+		}
+	}
+
+	// Extract status list entry if present
+	const statusPayload = payload.status as
+		| { status_list?: { idx?: number; uri?: string } }
+		| undefined;
+	const statusListEntry =
+		statusPayload?.status_list?.uri != null &&
+		statusPayload?.status_list?.idx != null
+			? {
+					statusListUrl: statusPayload.status_list.uri,
+					statusListIndex: statusPayload.status_list.idx,
+				}
+			: undefined;
+
+	return {
+		valid: true,
+		claims,
+		issuer: payload.iss as string,
+		format: "sd-jwt-vc",
+		issuedAt: new Date((payload.iat as number) * 1000),
+		expiresAt: payload.exp
+			? new Date((payload.exp as number) * 1000)
+			: undefined,
+		statusListEntry,
+	};
 }
 
-// === PRESENT (Selective Disclosure) ===
+// === SELECTIVE DISCLOSURE ===
 
-export function presentSdJwtVc(sdJwt: string, revealClaims: string[]): string {
+export function selectDisclosures(
+	sdJwt: string,
+	revealClaims: string[],
+): string {
 	const parts = sdJwt.split("~");
-	const jwt = parts[0]!;
+	const jwt = parts[0] ?? "";
 	const disclosureStrings = parts.slice(1).filter((d) => d.length > 0);
 
 	// Filter disclosures to only include those for requested claims
 	const includedDisclosures: string[] = [];
 
 	for (const disclosureStr of disclosureStrings) {
-		const disclosureJson = JSON.parse(
-			new TextDecoder().decode(base64urlToUint8Array(disclosureStr)),
-		) as [string, string, unknown];
+		let disclosureJson: [string, string, unknown];
+		try {
+			disclosureJson = JSON.parse(
+				new TextDecoder().decode(base64urlToUint8Array(disclosureStr)),
+			) as [string, string, unknown];
+		} catch {
+			throw new CredentialError(
+				ErrorCodes.CREDENTIAL_INVALID_FORMAT,
+				"Malformed disclosure in SD-JWT: unable to decode",
+			);
+		}
 		const claimName = disclosureJson[1];
 
 		if (revealClaims.includes(claimName)) {

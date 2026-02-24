@@ -1,49 +1,3 @@
-export class CredatError extends Error {
-	constructor(
-		public readonly code: string,
-		message: string,
-		public readonly humanMessage?: string,
-	) {
-		super(message);
-		this.name = "CredatError";
-	}
-}
-
-export class DIDError extends CredatError {
-	constructor(code: string, message: string, humanMessage?: string) {
-		super(code, message, humanMessage);
-		this.name = "DIDError";
-	}
-}
-
-export class CredentialError extends CredatError {
-	constructor(code: string, message: string, humanMessage?: string) {
-		super(code, message, humanMessage);
-		this.name = "CredentialError";
-	}
-}
-
-export class AgentError extends CredatError {
-	constructor(code: string, message: string, humanMessage?: string) {
-		super(code, message, humanMessage);
-		this.name = "AgentError";
-	}
-}
-
-export class DelegationError extends CredatError {
-	constructor(code: string, message: string, humanMessage?: string) {
-		super(code, message, humanMessage);
-		this.name = "DelegationError";
-	}
-}
-
-export class HandshakeError extends CredatError {
-	constructor(code: string, message: string, humanMessage?: string) {
-		super(code, message, humanMessage);
-		this.name = "HandshakeError";
-	}
-}
-
 export const ErrorCodes = {
 	// DID
 	DID_NOT_FOUND: "DID_NOT_FOUND",
@@ -67,9 +21,58 @@ export const ErrorCodes = {
 	DELEGATION_REVOKED: "DELEGATION_REVOKED",
 	DELEGATION_SIGNATURE_INVALID: "DELEGATION_SIGNATURE_INVALID",
 	DELEGATION_SCOPE_INVALID: "DELEGATION_SCOPE_INVALID",
+	DELEGATION_NOT_YET_VALID: "DELEGATION_NOT_YET_VALID",
 
 	// Handshake
 	HANDSHAKE_INVALID_NONCE: "HANDSHAKE_INVALID_NONCE",
 	HANDSHAKE_EXPIRED: "HANDSHAKE_EXPIRED",
 	HANDSHAKE_VERIFICATION_FAILED: "HANDSHAKE_VERIFICATION_FAILED",
 } as const;
+
+export type ErrorCode = (typeof ErrorCodes)[keyof typeof ErrorCodes];
+
+export class CredatError extends Error {
+	constructor(
+		public readonly code: ErrorCode,
+		message: string,
+		public readonly humanMessage?: string,
+	) {
+		super(message);
+		this.name = "CredatError";
+	}
+}
+
+export class DIDError extends CredatError {
+	constructor(code: ErrorCode, message: string, humanMessage?: string) {
+		super(code, message, humanMessage);
+		this.name = "DIDError";
+	}
+}
+
+export class CredentialError extends CredatError {
+	constructor(code: ErrorCode, message: string, humanMessage?: string) {
+		super(code, message, humanMessage);
+		this.name = "CredentialError";
+	}
+}
+
+export class AgentError extends CredatError {
+	constructor(code: ErrorCode, message: string, humanMessage?: string) {
+		super(code, message, humanMessage);
+		this.name = "AgentError";
+	}
+}
+
+export class DelegationError extends CredatError {
+	constructor(code: ErrorCode, message: string, humanMessage?: string) {
+		super(code, message, humanMessage);
+		this.name = "DelegationError";
+	}
+}
+
+export class HandshakeError extends CredatError {
+	constructor(code: ErrorCode, message: string, humanMessage?: string) {
+		super(code, message, humanMessage);
+		this.name = "HandshakeError";
+	}
+}

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { generateKeyPair } from "../crypto/keys";
 import { createDidWeb } from "../did/methods/web";
+import { ErrorCodes } from "../errors";
 import { delegate } from "./issue";
 import { verifyDelegation } from "./verify";
 
@@ -17,7 +18,7 @@ describe("verifyDelegation", () => {
 			scopes: ["book:travel", "read:email"],
 		});
 
-		const result = await verifyDelegation(delegation.raw, {
+		const result = await verifyDelegation(delegation.token, {
 			ownerPublicKey: ownerKeyPair.publicKey,
 		});
 
@@ -42,7 +43,7 @@ describe("verifyDelegation", () => {
 			scopes: ["book:travel"],
 		});
 
-		const result = await verifyDelegation(delegation.raw, {
+		const result = await verifyDelegation(delegation.token, {
 			ownerPublicKey: wrongKeyPair.publicKey,
 		});
 
@@ -63,14 +64,37 @@ describe("verifyDelegation", () => {
 			validUntil: "2020-01-01T00:00:00Z",
 		});
 
-		const result = await verifyDelegation(delegation.raw, {
+		const result = await verifyDelegation(delegation.token, {
 			ownerPublicKey: ownerKeyPair.publicKey,
 		});
 
 		expect(result.valid).toBe(false);
-		expect(result.errors.some((e) => e.code === "DELEGATION_EXPIRED")).toBe(
-			true,
-		);
+		expect(
+			result.errors.some((e) => e.code === ErrorCodes.DELEGATION_EXPIRED),
+		).toBe(true);
+	});
+
+	it("rejects not-yet-valid delegation", async () => {
+		const ownerKeyPair = generateKeyPair("ES256");
+		const ownerDid = createDidWeb("owner.example.com");
+		const agentDid = createDidWeb("agent.example.com");
+
+		const delegation = await delegate({
+			agent: agentDid,
+			owner: ownerDid,
+			ownerKeyPair,
+			scopes: ["book:travel"],
+			validFrom: "2099-01-01T00:00:00Z",
+		});
+
+		const result = await verifyDelegation(delegation.token, {
+			ownerPublicKey: ownerKeyPair.publicKey,
+		});
+
+		expect(result.valid).toBe(false);
+		expect(
+			result.errors.some((e) => e.code === ErrorCodes.DELEGATION_NOT_YET_VALID),
+		).toBe(true);
 	});
 
 	it("extracts constraints from delegation", async () => {
@@ -86,7 +110,7 @@ describe("verifyDelegation", () => {
 			constraints: { maxTransactionValue: 500 },
 		});
 
-		const result = await verifyDelegation(delegation.raw, {
+		const result = await verifyDelegation(delegation.token, {
 			ownerPublicKey: ownerKeyPair.publicKey,
 		});
 

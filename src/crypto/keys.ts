@@ -59,8 +59,9 @@ export function publicKeyToJwk(
 
 export function jwkToPublicKey(jwk: JsonWebKey): Uint8Array {
 	if (jwk.kty === "EC" && jwk.crv === "P-256") {
-		const x = base64urlToUint8Array(jwk.x!);
-		const y = base64urlToUint8Array(jwk.y!);
+		if (!jwk.x || !jwk.y) throw new Error("Missing x or y in EC JWK");
+		const x = base64urlToUint8Array(jwk.x);
+		const y = base64urlToUint8Array(jwk.y);
 		// Reconstruct uncompressed, then compress
 		const uncompressed = new Uint8Array(65);
 		uncompressed[0] = 0x04;
@@ -71,7 +72,8 @@ export function jwkToPublicKey(jwk: JsonWebKey): Uint8Array {
 	}
 
 	if (jwk.kty === "OKP" && jwk.crv === "Ed25519") {
-		return base64urlToUint8Array(jwk.x!);
+		if (!jwk.x) throw new Error("Missing x in OKP JWK");
+		return base64urlToUint8Array(jwk.x);
 	}
 
 	throw new Error(`Unsupported JWK: kty=${jwk.kty}, crv=${jwk.crv}`);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { generateKeyPair } from "../crypto/keys";
+import { generateKeyPair } from "../../crypto/keys";
 import {
 	createStatusList,
 	createStatusListCredential,
@@ -208,8 +208,8 @@ describe("Status List", () => {
 
 		// Verify the decoded bitstring has the revocation
 		const reconstructed = createStatusList({ id: "tmp", issuer: "", url: "" });
-		reconstructed.bitstring = result.bitstring!;
-		reconstructed.size = result.bitstring?.length * 8;
+		reconstructed.bitstring = result.bitstring ?? new Uint8Array(0);
+		reconstructed.size = (result.bitstring?.length ?? 0) * 8;
 		expect(isRevoked(reconstructed, 42)).toBe(true);
 		expect(isRevoked(reconstructed, 0)).toBe(false);
 	});

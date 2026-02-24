@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { generateKeyPair } from "../../crypto";
-import { createSdJwtVc, presentSdJwtVc, verifySdJwtVc } from "./sd-jwt-vc";
+import { createSdJwtVc, selectDisclosures, verifySdJwtVc } from "./sd-jwt-vc";
 
 describe("SD-JWT VC", () => {
 	const issuerKp = generateKeyPair("ES256");
@@ -60,7 +60,7 @@ describe("SD-JWT VC", () => {
 		});
 
 		// Present only givenName and familyName (hide dateOfBirth and nationality)
-		const presentation = presentSdJwtVc(sdJwt, ["givenName", "familyName"]);
+		const presentation = selectDisclosures(sdJwt, ["givenName", "familyName"]);
 
 		const result = await verifySdJwtVc(presentation, issuerKp.publicKey);
 		expect(result.valid).toBe(true);
@@ -85,7 +85,7 @@ describe("SD-JWT VC", () => {
 		});
 
 		// Present all claims including dateOfBirth
-		const presentation = presentSdJwtVc(sdJwt, ["givenName", "dateOfBirth"]);
+		const presentation = selectDisclosures(sdJwt, ["givenName", "dateOfBirth"]);
 
 		const result = await verifySdJwtVc(presentation, issuerKp.publicKey);
 		expect(result.valid).toBe(true);
@@ -155,7 +155,7 @@ describe("SD-JWT VC", () => {
 		});
 
 		// Decode header
-		const headerB64 = sdJwt.split(".")[0]!;
+		const headerB64 = sdJwt.split(".")[0] ?? "";
 		const header = JSON.parse(Buffer.from(headerB64, "base64url").toString());
 		expect(header.typ).toBe("dc+sd-jwt");
 		expect(header.alg).toBe("ES256");

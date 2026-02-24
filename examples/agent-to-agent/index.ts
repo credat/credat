@@ -45,11 +45,7 @@ async function main() {
 	const aliceDelegation = await delegate({
 		agent: aliceAgent.did,
 		owner: aliceDid,
-		ownerKeyPair: {
-			algorithm: aliceKeyPair.algorithm,
-			publicKey: aliceKeyPair.publicKey,
-			privateKey: aliceKeyPair.privateKey,
-		},
+		ownerKeyPair: aliceKeyPair,
 		scopes: ["travel:book", "travel:search", "payment:authorize"],
 		constraints: {
 			maxTransactionValue: 5000,
@@ -80,11 +76,7 @@ async function main() {
 	const bobDelegation = await delegate({
 		agent: bobAgent.did,
 		owner: bobDid,
-		ownerKeyPair: {
-			algorithm: bobKeyPair.algorithm,
-			publicKey: bobKeyPair.publicKey,
-			privateKey: bobKeyPair.privateKey,
-		},
+		ownerKeyPair: bobKeyPair,
 		scopes: ["flights:offer", "flights:confirm", "receipts:issue"],
 	});
 
@@ -106,13 +98,16 @@ async function main() {
 
 	const presentation = await presentCredentials({
 		challenge,
-		delegation: aliceDelegation.raw,
+		delegation: aliceDelegation.token,
 		agent: aliceAgent,
 	});
 
 	console.log("Presentation from:", presentation.from);
 	console.log("Presentation type:", presentation.type);
-	console.log("Nonce matches challenge:", presentation.nonce === challenge.nonce);
+	console.log(
+		"Nonce matches challenge:",
+		presentation.nonce === challenge.nonce,
+	);
 	console.log();
 
 	// ── Handshake: Bob's agent verifies Alice's presentation ──
@@ -122,7 +117,7 @@ async function main() {
 		challenge,
 		ownerPublicKey: aliceKeyPair.publicKey,
 		agentPublicKey: aliceAgent.keyPair.publicKey,
-		agentAlgorithm: aliceAgent.keyPair.algorithm as "ES256" | "EdDSA",
+		agentAlgorithm: aliceAgent.keyPair.algorithm,
 	});
 
 	console.log("Verification valid:", result.valid);
@@ -144,7 +139,9 @@ async function main() {
 	console.log("Has admin access:", canAdmin);
 
 	if (result.valid && canBook && canPay) {
-		console.log("\nBob's agent trusts Alice's agent to book and pay for flights.");
+		console.log(
+			"\nBob's agent trusts Alice's agent to book and pay for flights.",
+		);
 		if (result.constraints?.maxTransactionValue) {
 			console.log(
 				`Transaction limit: $${result.constraints.maxTransactionValue}`,

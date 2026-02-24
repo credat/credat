@@ -16,8 +16,8 @@ describe("delegate", () => {
 			scopes: ["book:travel", "read:email"],
 		});
 
-		expect(delegation.raw).toBeDefined();
-		expect(delegation.raw).toContain("~"); // SD-JWT format
+		expect(delegation.token).toBeDefined();
+		expect(delegation.token).toContain("~"); // SD-JWT format
 		expect(delegation.claims.agent).toBe(agentDid);
 		expect(delegation.claims.owner).toBe(ownerDid);
 		expect(delegation.claims.scopes).toEqual(["book:travel", "read:email"]);

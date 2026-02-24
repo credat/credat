@@ -1,3 +1,6 @@
+import type { Algorithm, KeyPair } from "./crypto/keys";
+import type { ErrorCode } from "./errors";
+
 // === JSON Web Key (subset needed for DID operations) ===
 
 export interface JsonWebKey {
@@ -15,83 +18,27 @@ export interface JsonWebKey {
 
 export type CredentialFormat = "sd-jwt-vc";
 
+export type CredentialClaimValue =
+	| string
+	| number
+	| boolean
+	| null
+	| CredentialClaimValue[]
+	| { [key: string]: CredentialClaimValue };
+
 export interface CredentialClaims {
-	[key: string]: string | number | boolean | null | CredentialClaims;
-}
-
-export interface CredentialSchema {
-	type: string;
-	description?: string;
-	claims: Record<string, ClaimDefinition>;
-	format: CredentialFormat;
-}
-
-export interface ClaimDefinition {
-	type: "string" | "number" | "boolean" | "date" | "object";
-	required?: boolean;
-	description?: string;
-	selectiveDisclosure?: boolean;
-}
-
-export interface IssuanceRequest {
-	type: string;
-	claims: CredentialClaims;
-	format?: CredentialFormat;
-	selectiveDisclosure?: string[];
-	holder?: string; // DID of the holder
-	expiresAt?: Date;
-	statusListEntry?: StatusListEntry;
-}
-
-export interface IssuedCredential {
-	id: string;
-	format: CredentialFormat;
-	raw: string; // Encoded credential (SD-JWT)
-	type: string;
-	issuer: string; // Issuer DID
-	holder?: string;
-	issuedAt: Date;
-	expiresAt?: Date;
-	claims: CredentialClaims;
-	statusListEntry?: StatusListEntry;
-}
-
-export interface VerificationRequest {
-	credential: string; // Raw encoded credential
-	requiredClaims?: string[];
-	trustList?: "eu" | "custom";
-	trustedIssuers?: string[];
-	checkRevocation?: boolean;
-	statusList?: StatusListData;
-}
-
-export interface VerificationResult {
-	valid: boolean;
-	claims: CredentialClaims;
-	issuer: string;
-	format: CredentialFormat;
-	issuedAt: Date;
-	expiresAt?: Date;
-	errors?: VerificationError[];
-	trustChain?: TrustChainInfo;
-	revocationStatus?: RevocationStatus;
+	[key: string]: CredentialClaimValue;
 }
 
 export interface VerificationError {
-	code: string;
+	code: ErrorCode;
 	message: string;
-	humanMessage?: string; // AI-generated explanation
-}
-
-export interface TrustChainInfo {
-	issuerTrusted: boolean;
-	trustListSource?: string;
-	verifiedAt: Date;
+	humanMessage?: string;
 }
 
 // === DID Types ===
 
-export type DIDMethod = "key" | "web" | "jwk";
+export type DIDMethod = "key" | "web";
 
 export interface DIDDocument {
 	id: string;
@@ -105,7 +52,7 @@ export interface VerificationMethod {
 	id: string;
 	type: string;
 	controller: string;
-	publicKeyJwk?: JsonWebKey; // Uses local JsonWebKey, not DOM
+	publicKeyJwk?: JsonWebKey;
 	publicKeyMultibase?: string;
 }
 
@@ -113,11 +60,6 @@ export interface ServiceEndpoint {
 	id: string;
 	type: string;
 	serviceEndpoint: string;
-}
-
-export interface DIDCreateOptions {
-	method: DIDMethod;
-	domain?: string; // Required for did:web
 }
 
 export interface DIDResolutionResult {
@@ -147,19 +89,14 @@ export type RevocationStatus = "valid" | "revoked" | "unknown";
 export interface AgentConfig {
 	domain: string;
 	path?: string;
-	algorithm?: "ES256" | "EdDSA" | "ES256K";
+	algorithm?: Algorithm;
 	storage?: import("./storage/types").StorageAdapter;
 }
 
 export interface AgentIdentity {
 	did: string;
 	didDocument: DIDDocument;
-	keyPair: {
-		algorithm: string;
-		publicKey: Uint8Array;
-		privateKey: Uint8Array;
-	};
-	algorithm: string;
+	keyPair: KeyPair;
 	domain: string;
 	path?: string;
 }
@@ -169,17 +106,12 @@ export interface AgentIdentity {
 export interface DelegateOptions {
 	agent: string;
 	owner: string;
-	ownerKeyPair: {
-		algorithm: string;
-		publicKey: Uint8Array;
-		privateKey: Uint8Array;
-	};
+	ownerKeyPair: KeyPair;
 	scopes: string[];
 	constraints?: DelegationConstraints;
 	validFrom?: string;
 	validUntil?: string;
-	statusListUrl?: string;
-	statusListIndex?: number;
+	statusList?: { url: string; index: number };
 }
 
 export interface DelegationConstraints {
@@ -191,7 +123,7 @@ export interface DelegationConstraints {
 }
 
 export interface DelegationCredential {
-	raw: string;
+	token: string;
 	claims: DelegationClaims;
 }
 
@@ -204,21 +136,28 @@ export interface DelegationClaims {
 	validUntil?: string;
 }
 
-export interface DelegationVerifyOptions {
-	checkRevocation?: boolean;
-	statusListUrl?: string;
-}
-
-export interface DelegationResult {
-	valid: boolean;
-	agent: string;
-	owner: string;
-	scopes: string[];
-	constraints?: DelegationConstraints;
-	validFrom?: string;
-	validUntil?: string;
-	errors: VerificationError[];
-}
+// Discriminated union: fields are guaranteed when valid, optional when not
+export type DelegationResult =
+	| {
+			valid: true;
+			agent: string;
+			owner: string;
+			scopes: string[];
+			constraints?: DelegationConstraints;
+			validFrom?: string;
+			validUntil?: string;
+			errors: [];
+	  }
+	| {
+			valid: false;
+			agent?: string;
+			owner?: string;
+			scopes?: string[];
+			constraints?: DelegationConstraints;
+			validFrom?: string;
+			validUntil?: string;
+			errors: VerificationError[];
+	  };
 
 // === Handshake Protocol ===
 
