@@ -38,9 +38,6 @@ export {
 	DIDError,
 	ErrorCodes,
 } from "./errors";
-// === Keys ===
-export type { KeyManager, StoredKey } from "./keys";
-export { LocalKeyManager } from "./keys";
 // === Storage ===
 export type { StorageAdapter } from "./storage";
 export { MemoryStorage } from "./storage";

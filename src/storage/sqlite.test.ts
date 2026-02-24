@@ -2,7 +2,6 @@ import { existsSync, mkdtempSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { LocalKeyManager } from "../keys/local";
 import { SqliteStorage } from "./sqlite";
 
 describe("SqliteStorage", () => {
@@ -103,15 +102,5 @@ describe("SqliteStorage", () => {
 		await storage.set("creds", "complex", complex);
 		const result = await storage.get("creds", "complex");
 		expect(result).toEqual(complex);
-	});
-
-	it("works with LocalKeyManager", async () => {
-		const km = new LocalKeyManager(storage);
-		const key = await km.createKey("test-key", "ES256");
-		expect(key.id).toBe("test-key");
-
-		const retrieved = await km.getKey("test-key");
-		expect(retrieved).not.toBeNull();
-		expect(retrieved?.id).toBe("test-key");
 	});
 });
