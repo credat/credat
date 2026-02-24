@@ -1,10 +1,10 @@
-import { describe, it, expect } from "vitest";
-import { createChallenge } from "./challenge";
-import { presentCredentials } from "./present";
-import { delegate } from "../delegation/issue";
+import { describe, expect, it } from "vitest";
 import { createAgent } from "../agent/create";
 import { generateKeyPair } from "../crypto/keys";
+import { delegate } from "../delegation/issue";
 import { createDidWeb } from "../did/methods/web";
+import { createChallenge } from "./challenge";
+import { presentCredentials } from "./present";
 
 describe("presentCredentials", () => {
 	it("creates a presentation from challenge + delegation", async () => {

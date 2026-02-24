@@ -1,1 +1,1 @@
-export { hasScope, hasAnyScope, hasAllScopes, getAllScopes } from "./helpers";
+export { getAllScopes, hasAllScopes, hasAnyScope, hasScope } from "./helpers";

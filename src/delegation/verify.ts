@@ -50,7 +50,9 @@ export async function verifyDelegation(
 			agent: result.claims.agent as string,
 			owner: result.issuer,
 			scopes: result.claims.scopes as unknown as string[],
-			constraints: result.claims.constraints as unknown as DelegationConstraints | undefined,
+			constraints: result.claims.constraints as unknown as
+				| DelegationConstraints
+				| undefined,
 			validFrom: result.claims.validFrom as string | undefined,
 			validUntil: result.claims.validUntil as string | undefined,
 			errors,
@@ -62,7 +64,9 @@ export async function verifyDelegation(
 		agent: result.claims.agent as string,
 		owner: result.issuer,
 		scopes: result.claims.scopes as unknown as string[],
-		constraints: result.claims.constraints as unknown as DelegationConstraints | undefined,
+		constraints: result.claims.constraints as unknown as
+			| DelegationConstraints
+			| undefined,
 		validFrom: result.claims.validFrom as string | undefined,
 		validUntil: result.claims.validUntil as string | undefined,
 		errors: [],

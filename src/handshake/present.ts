@@ -1,6 +1,6 @@
-import { sign } from "../crypto/sign";
-import { uint8ArrayToBase64url } from "../crypto/keys";
 import type { Algorithm } from "../crypto/keys";
+import { uint8ArrayToBase64url } from "../crypto/keys";
+import { sign } from "../crypto/sign";
 import type {
 	AgentIdentity,
 	ChallengeMessage,

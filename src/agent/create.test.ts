@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
-import { createAgent } from "./create";
+import { describe, expect, it } from "vitest";
 import { MemoryStorage } from "../storage/memory";
+import { createAgent } from "./create";
 
 describe("createAgent", () => {
 	it("creates agent with did:web from domain", async () => {
@@ -53,8 +53,8 @@ describe("createAgent", () => {
 		const agent = await createAgent({ domain: "agent.example.com" });
 		const doc = agent.didDocument;
 		expect(doc.verificationMethod).toHaveLength(1);
-		expect(doc.verificationMethod![0].type).toBe("JsonWebKey2020");
-		expect(doc.verificationMethod![0].publicKeyJwk).toBeDefined();
+		expect(doc.verificationMethod?.[0].type).toBe("JsonWebKey2020");
+		expect(doc.verificationMethod?.[0].publicKeyJwk).toBeDefined();
 		expect(doc.authentication).toHaveLength(1);
 		expect(doc.assertionMethod).toHaveLength(1);
 	});

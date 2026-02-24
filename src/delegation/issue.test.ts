@@ -1,7 +1,7 @@
-import { describe, it, expect } from "vitest";
-import { delegate } from "./issue";
+import { describe, expect, it } from "vitest";
 import { generateKeyPair } from "../crypto/keys";
 import { createDidWeb } from "../did/methods/web";
+import { delegate } from "./issue";
 
 describe("delegate", () => {
 	it("issues a delegation VC as SD-JWT", async () => {

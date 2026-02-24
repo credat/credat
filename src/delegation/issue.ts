@@ -1,10 +1,10 @@
 import { createSdJwtVc } from "../credentials/formats/sd-jwt-vc";
 import { DelegationError, ErrorCodes } from "../errors";
 import type {
-	DelegateOptions,
-	DelegationCredential,
-	DelegationClaims,
 	CredentialClaims,
+	DelegateOptions,
+	DelegationClaims,
+	DelegationCredential,
 } from "../types";
 
 const DELEGATION_VC_TYPE = "CreditDelegationCredential";
@@ -12,7 +12,15 @@ const DELEGATION_VC_TYPE = "CreditDelegationCredential";
 export async function delegate(
 	options: DelegateOptions,
 ): Promise<DelegationCredential> {
-	const { agent, owner, ownerKeyPair, scopes, constraints, validFrom, validUntil } = options;
+	const {
+		agent,
+		owner,
+		ownerKeyPair,
+		scopes,
+		constraints,
+		validFrom,
+		validUntil,
+	} = options;
 
 	if (scopes.length === 0) {
 		throw new DelegationError(

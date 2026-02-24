@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { hasScope, hasAnyScope, hasAllScopes, getAllScopes } from "./helpers";
+import { describe, expect, it } from "vitest";
+import { getAllScopes, hasAllScopes, hasAnyScope, hasScope } from "./helpers";
 
 const mockResult = {
 	valid: true,

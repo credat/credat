@@ -1,8 +1,8 @@
-import { describe, it, expect } from "vitest";
-import { delegate } from "./issue";
-import { verifyDelegation } from "./verify";
+import { describe, expect, it } from "vitest";
 import { generateKeyPair } from "../crypto/keys";
 import { createDidWeb } from "../did/methods/web";
+import { delegate } from "./issue";
+import { verifyDelegation } from "./verify";
 
 describe("verifyDelegation", () => {
 	it("verifies a valid delegation VC", async () => {
@@ -68,7 +68,9 @@ describe("verifyDelegation", () => {
 		});
 
 		expect(result.valid).toBe(false);
-		expect(result.errors.some((e) => e.code === "DELEGATION_EXPIRED")).toBe(true);
+		expect(result.errors.some((e) => e.code === "DELEGATION_EXPIRED")).toBe(
+			true,
+		);
 	});
 
 	it("extracts constraints from delegation", async () => {

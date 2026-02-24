@@ -15,10 +15,7 @@ export async function loadAgent(
 	const stored = await storage.get<AgentIdentity>("agents", did);
 
 	if (!stored) {
-		throw new AgentError(
-			ErrorCodes.AGENT_NOT_FOUND,
-			`Agent not found: ${did}`,
-		);
+		throw new AgentError(ErrorCodes.AGENT_NOT_FOUND, `Agent not found: ${did}`);
 	}
 
 	return stored;

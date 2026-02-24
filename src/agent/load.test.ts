@@ -1,7 +1,7 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
+import { MemoryStorage } from "../storage/memory";
 import { createAgent } from "./create";
 import { loadAgent } from "./load";
-import { MemoryStorage } from "../storage/memory";
 
 describe("loadAgent", () => {
 	it("loads a previously created agent", async () => {
