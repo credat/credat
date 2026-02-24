@@ -141,3 +141,113 @@ export interface StatusListData {
 }
 
 export type RevocationStatus = "valid" | "revoked" | "unknown";
+
+// === Agent Identity ===
+
+export interface AgentConfig {
+	domain: string;
+	path?: string;
+	algorithm?: "ES256" | "EdDSA" | "ES256K";
+	storage?: import("./storage/types").StorageAdapter;
+}
+
+export interface AgentIdentity {
+	did: string;
+	didDocument: DIDDocument;
+	keyPair: {
+		algorithm: string;
+		publicKey: Uint8Array;
+		privateKey: Uint8Array;
+	};
+	algorithm: string;
+	domain: string;
+	path?: string;
+}
+
+// === Delegation ===
+
+export interface DelegateOptions {
+	agent: string;
+	owner: string;
+	ownerKeyPair: {
+		algorithm: string;
+		publicKey: Uint8Array;
+		privateKey: Uint8Array;
+	};
+	scopes: string[];
+	constraints?: DelegationConstraints;
+	validFrom?: string;
+	validUntil?: string;
+	statusListUrl?: string;
+	statusListIndex?: number;
+}
+
+export interface DelegationConstraints {
+	maxTransactionValue?: number;
+	validUntil?: string;
+	allowedDomains?: string[];
+	rateLimit?: number;
+	[key: string]: unknown;
+}
+
+export interface DelegationCredential {
+	raw: string;
+	claims: DelegationClaims;
+}
+
+export interface DelegationClaims {
+	agent: string;
+	owner: string;
+	scopes: string[];
+	constraints?: DelegationConstraints;
+	validFrom?: string;
+	validUntil?: string;
+}
+
+export interface DelegationVerifyOptions {
+	checkRevocation?: boolean;
+	statusListUrl?: string;
+}
+
+export interface DelegationResult {
+	valid: boolean;
+	agent: string;
+	owner: string;
+	scopes: string[];
+	constraints?: DelegationConstraints;
+	validFrom?: string;
+	validUntil?: string;
+	errors: VerificationError[];
+}
+
+// === Handshake Protocol ===
+
+export interface ChallengeMessage {
+	type: "credat:challenge";
+	nonce: string;
+	from: string;
+	timestamp: string;
+}
+
+export interface PresentationMessage {
+	type: "credat:presentation";
+	delegation: string;
+	nonce: string;
+	proof: string;
+	from: string;
+}
+
+export interface AckMessage {
+	type: "credat:ack";
+	verified: boolean;
+	scopes?: string[];
+	counterChallenge?: ChallengeMessage;
+	delegation?: string;
+	proof?: string;
+	from?: string;
+}
+
+export type HandshakeMessage =
+	| ChallengeMessage
+	| PresentationMessage
+	| AckMessage;
