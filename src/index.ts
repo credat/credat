@@ -48,8 +48,6 @@ export { LocalKeyManager } from "./keys";
 export type { StorageAdapter } from "./storage";
 // === Storage (advanced) ===
 export { MemoryStorage } from "./storage";
-// === Trust (advanced) ===
-export { CustomTrustList, EuTrustList, isIssuerTrusted } from "./trust";
 // === Types ===
 export type {
 	AIConfig,

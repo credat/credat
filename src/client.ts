@@ -21,7 +21,6 @@ import { resolveDID } from "./did/resolver";
 import { CredatError, CredentialError, ErrorCodes } from "./errors";
 import { MemoryStorage } from "./storage";
 import type { StorageAdapter } from "./storage/types";
-import { isIssuerTrusted } from "./trust/trust-list";
 import type {
 	AIConfig,
 	AIGeneratedSchema,
@@ -34,7 +33,6 @@ import type {
 	IssuedCredential,
 	RevocationStatus,
 	StatusListData,
-	TrustChainInfo,
 	VerificationError,
 	VerificationRequest,
 	VerificationResult,
@@ -164,20 +162,6 @@ async function verifySdJwtCredential(
 		}
 	}
 
-	let trustChain: TrustChainInfo | undefined;
-	if (request.trustList) {
-		trustChain = await isIssuerTrusted(
-			result.issuer,
-			request.trustList,
-			request.trustedIssuers,
-		);
-		if (!trustChain.issuerTrusted) {
-			errors.push({
-				code: ErrorCodes.ISSUER_UNTRUSTED,
-				message: `Issuer ${result.issuer} is not trusted`,
-			});
-		}
-	}
 
 	// Check revocation
 	let revocationStatus: RevocationStatus | undefined;
@@ -209,7 +193,6 @@ async function verifySdJwtCredential(
 		issuedAt: result.issuedAt,
 		expiresAt: result.expiresAt,
 		errors: errors.length > 0 ? errors : undefined,
-		trustChain,
 		revocationStatus,
 	};
 }
