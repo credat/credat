@@ -8,7 +8,6 @@ describe("createClient", () => {
 		expect(client).toBeDefined();
 		expect(client.credentials).toBeDefined();
 		expect(client.did).toBeDefined();
-		expect(client.ai).toBeDefined();
 	});
 
 	it("throws for cloud mode (not yet available)", () => {
@@ -176,35 +175,6 @@ describe("createClient", () => {
 		});
 	});
 
-	describe("ai module", () => {
-		it("throws when AI is not configured", async () => {
-			const client = createClient({ mode: "local" });
-
-			await expect(client.ai.generateSchema("test")).rejects.toThrow(
-				"AI features require configuration",
-			);
-		});
-
-		it("throws when AI is not configured for explainError", async () => {
-			const client = createClient({ mode: "local" });
-
-			await expect(
-				client.ai.explainError({ code: "TEST", message: "test" }),
-			).rejects.toThrow("AI features require configuration");
-		});
-
-		it("throws when AI is not configured for generateTestFixtures", async () => {
-			const client = createClient({ mode: "local" });
-
-			await expect(
-				client.ai.generateTestFixtures({
-					type: "Test",
-					claims: {},
-					format: "sd-jwt-vc",
-				}),
-			).rejects.toThrow("AI features require configuration");
-		});
-	});
 });
 
 describe("full issue → verify flow", () => {

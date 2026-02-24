@@ -39,10 +39,6 @@ describe("public API surface", () => {
 		expect(client.did.create).toBeTypeOf("function");
 		expect(client.did.resolve).toBeTypeOf("function");
 
-		expect(client.ai).toBeDefined();
-		expect(client.ai.generateSchema).toBeTypeOf("function");
-		expect(client.ai.generateTestFixtures).toBeTypeOf("function");
-		expect(client.ai.explainError).toBeTypeOf("function");
 
 		// New module
 		expect(client.statusList).toBeDefined();

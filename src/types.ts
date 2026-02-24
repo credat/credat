@@ -180,14 +180,6 @@ export interface CredatClient {
 		create: (options: DIDCreateOptions) => Promise<string>;
 		resolve: (did: string) => Promise<DIDResolutionResult>;
 	};
-	ai: {
-		generateSchema: (description: string) => Promise<AIGeneratedSchema>;
-		generateTestFixtures: (
-			schema: CredentialSchema,
-			options?: { count?: number },
-		) => Promise<IssuedCredential[]>;
-		explainError: (error: VerificationError) => Promise<string>;
-	};
 	statusList: {
 		create: (options: {
 			id: string;

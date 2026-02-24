@@ -1,6 +1,3 @@
-import { explainError } from "./ai/error-explainer";
-import { generateSchema } from "./ai/schema-generator";
-import { generateTestFixtures } from "./ai/test-fixtures";
 import { validateConfig } from "./config";
 import { createSdJwtVc, verifySdJwtVc } from "./credentials/formats/sd-jwt-vc";
 import {
@@ -22,11 +19,8 @@ import { CredatError, CredentialError, ErrorCodes } from "./errors";
 import { MemoryStorage } from "./storage";
 import type { StorageAdapter } from "./storage/types";
 import type {
-	AIConfig,
-	AIGeneratedSchema,
 	ClientConfig,
 	CredatClient,
-	CredentialSchema,
 	DIDCreateOptions,
 	DIDResolutionResult,
 	IssuanceRequest,
@@ -73,12 +67,6 @@ function createLocalClient(config: ClientConfig): CredatClient {
 			issuerDid,
 		),
 		did: createDIDModule(),
-		ai: createAIModule(
-			config.ai,
-			keyPair.privateKey,
-			keyPair.publicKey,
-			issuerDid,
-		),
 		statusList: createStatusListModule(storage, issuerDid, keyPair.privateKey),
 	};
 }
@@ -359,73 +347,3 @@ function createStatusListModule(
 	};
 }
 
-// === AI Module ===
-
-function createAIModule(
-	aiConfig: AIConfig | undefined,
-	privateKey: Uint8Array,
-	publicKey: Uint8Array,
-	issuerDid: string,
-) {
-	const requireAI = (): AIConfig => {
-		if (!aiConfig) {
-			throw new CredatError(
-				ErrorCodes.INVALID_CONFIG,
-				"AI features require configuration",
-				'Enable AI: createClient({ mode: "local", ai: { provider: "anthropic", apiKey: "sk-..." } })',
-			);
-		}
-		return aiConfig;
-	};
-
-	return {
-		async generateSchema(description: string): Promise<AIGeneratedSchema> {
-			return generateSchema(requireAI(), description);
-		},
-
-		async generateTestFixtures(
-			schema: CredentialSchema,
-			options?: { count?: number },
-		): Promise<IssuedCredential[]> {
-			const count = options?.count ?? 5;
-			const claimsArray = await generateTestFixtures(
-				requireAI(),
-				schema,
-				count,
-			);
-
-			const credentials: IssuedCredential[] = [];
-
-			for (const claims of claimsArray) {
-				const sdClaims = Object.entries(schema.claims)
-					.filter(([, def]) => def.selectiveDisclosure)
-					.map(([name]) => name);
-
-				const raw = await createSdJwtVc({
-					issuerPrivateKey: privateKey,
-					issuerPublicKey: publicKey,
-					issuerDid,
-					type: schema.type,
-					claims,
-					selectiveDisclosure: sdClaims,
-				});
-
-				credentials.push({
-					id: `urn:uuid:${crypto.randomUUID()}`,
-					format: "sd-jwt-vc",
-					raw,
-					type: schema.type,
-					issuer: issuerDid,
-					issuedAt: new Date(),
-					claims,
-				});
-			}
-
-			return credentials;
-		},
-
-		async explainError(error: VerificationError): Promise<string> {
-			return explainError(requireAI(), error);
-		},
-	};
-}
