@@ -63,8 +63,7 @@
   },
   "dependencies": {
     "@noble/curves": "^2.0.1",
-    "@noble/hashes": "^2.0.1",
-    "cbor-x": "^1.6.0"
+    "@noble/hashes": "^2.0.1"
   },
   "peerDependencies": {
     "better-sqlite3": ">=11.0.0"
