@@ -264,7 +264,7 @@ export function presentSdJwtVc(sdJwt: string, revealClaims: string[]): string {
 // === Helpers ===
 
 function createDisclosure(claimName: string, claimValue: unknown): Disclosure {
-	// 128-bit salt per EBSI profile
+	// 128-bit salt
 	const salt = uint8ArrayToBase64url(randomBytes(16));
 	const disclosureArray = [salt, claimName, claimValue];
 	const encoded = jsonToBase64url(disclosureArray);

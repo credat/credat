@@ -1,6 +1,5 @@
 import { DIDError, ErrorCodes } from "../errors";
 import type { DIDResolutionResult } from "../types";
-import { resolveDidEbsi } from "./methods/ebsi";
 import { resolveDidKey } from "./methods/key";
 import { resolveDidWeb } from "./methods/web";
 
@@ -21,13 +20,11 @@ export async function resolveDID(did: string): Promise<DIDResolutionResult> {
 			return resolveDidKey(did);
 		case "web":
 			return resolveDidWeb(did);
-		case "ebsi":
-			return resolveDidEbsi(did);
 		default:
 			throw new DIDError(
 				ErrorCodes.DID_METHOD_UNSUPPORTED,
 				`Unsupported DID method: ${method}`,
-				`The DID method "${method}" is not supported. Supported methods: key, web, ebsi.`,
+				`The DID method "${method}" is not supported. Supported methods: key, web.`,
 			);
 	}
 }

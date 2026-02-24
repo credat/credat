@@ -91,7 +91,7 @@ export interface TrustChainInfo {
 
 // === DID Types ===
 
-export type DIDMethod = "key" | "web" | "ebsi";
+export type DIDMethod = "key" | "web" | "jwk";
 
 export interface DIDDocument {
 	id: string;
