@@ -23,8 +23,6 @@ export class DIDError extends CredatError {
 		this.name = "DIDError";
 	}
 }
-
-
 // Error codes
 export const ErrorCodes = {
 	// Credential errors
