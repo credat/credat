@@ -24,12 +24,6 @@ export class DIDError extends CredatError {
 	}
 }
 
-export class ProtocolError extends CredatError {
-	constructor(code: string, message: string, humanMessage?: string) {
-		super(code, message, humanMessage);
-		this.name = "ProtocolError";
-	}
-}
 
 // Error codes
 export const ErrorCodes = {
@@ -45,10 +39,6 @@ export const ErrorCodes = {
 	DID_NOT_FOUND: "DID_NOT_FOUND",
 	DID_METHOD_UNSUPPORTED: "DID_METHOD_UNSUPPORTED",
 	DID_RESOLUTION_FAILED: "DID_RESOLUTION_FAILED",
-
-	// Protocol errors
-	OPENID4VCI_FAILED: "OPENID4VCI_FAILED",
-	OPENID4VP_FAILED: "OPENID4VP_FAILED",
 
 	// Revocation errors
 	REVOKED: "CREDENTIAL_REVOKED",

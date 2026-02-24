@@ -41,14 +41,10 @@ export {
 	CredentialError,
 	DIDError,
 	ErrorCodes,
-	ProtocolError,
 } from "./errors";
 export type { KeyManager, StoredKey } from "./keys";
 // === Keys (advanced) ===
 export { LocalKeyManager } from "./keys";
-// === Protocols (advanced) ===
-export { CredentialIssuer } from "./protocols/openid4vci/issuer";
-export { CredentialVerifier } from "./protocols/openid4vp/verifier";
 export type { StorageAdapter } from "./storage";
 // === Storage (advanced) ===
 export { MemoryStorage } from "./storage";

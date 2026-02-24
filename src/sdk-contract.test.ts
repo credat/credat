@@ -15,11 +15,8 @@ import {
 	CredentialError,
 	DIDError,
 	ErrorCodes,
-	ProtocolError,
 } from "./errors";
 import { LocalKeyManager } from "./keys/local";
-import { CredentialIssuer } from "./protocols/openid4vci/issuer";
-import { CredentialVerifier } from "./protocols/openid4vp/verifier";
 import { MemoryStorage } from "./storage";
 import { SqliteStorage } from "./storage/sqlite";
 import type { StorageAdapter } from "./storage/types";
@@ -67,13 +64,10 @@ describe("public API surface", () => {
 		const base = new CredatError("CODE", "message", "human");
 		const cred = new CredentialError("CODE", "message");
 		const did = new DIDError("CODE", "message");
-		const proto = new ProtocolError("CODE", "message");
-
 		expect(base).toBeInstanceOf(Error);
 		expect(base).toBeInstanceOf(CredatError);
 		expect(cred).toBeInstanceOf(CredatError);
 		expect(did).toBeInstanceOf(CredatError);
-		expect(proto).toBeInstanceOf(CredatError);
 
 		expect(base.code).toBe("CODE");
 		expect(base.humanMessage).toBe("human");
@@ -92,9 +86,6 @@ describe("public API surface", () => {
 		expect(ErrorCodes.DID_NOT_FOUND).toBe("DID_NOT_FOUND");
 		expect(ErrorCodes.DID_METHOD_UNSUPPORTED).toBe("DID_METHOD_UNSUPPORTED");
 
-		// Protocol errors
-		expect(ErrorCodes.OPENID4VCI_FAILED).toBe("OPENID4VCI_FAILED");
-		expect(ErrorCodes.OPENID4VP_FAILED).toBe("OPENID4VP_FAILED");
 	});
 });
 
@@ -208,58 +199,6 @@ describe("DID ↔ crypto round-trip", () => {
 	});
 });
 
-describe("OpenID4VCI → verify with revocation", () => {
-	it("full protocol flow: offer → token → issue → verify + revocation check", async () => {
-		const keyPair = generateKeyPair("ES256");
-		const issuerDid = createDidKey(keyPair.publicKey, "ES256");
-
-		const issuer = new CredentialIssuer({
-			issuerUrl: "https://issuer.example.com",
-			issuerDid,
-			signingKeyId: "key-1",
-			privateKey: keyPair.privateKey,
-			publicKey: keyPair.publicKey,
-		});
-
-		// Step 1: Create offer
-		const { offer } = issuer.createOffer({
-			credentialType: "KYCVerification",
-			claims: { givenName: "Alice", familyName: "Dupont" },
-		});
-
-		// Step 2: Exchange pre-authorized code
-		const code =
-			offer.grants["urn:ietf:params:oauth:grant-type:pre-authorized_code"][
-				"pre-authorized_code"
-			];
-		const tokenResponse = issuer.exchangePreAuthorizedCode(code);
-
-		// Step 3: Issue credential
-		const { response } = await issuer.issueCredential(
-			tokenResponse.access_token,
-			"vc+sd-jwt",
-		);
-
-		// Step 4: Verify via client (with revocation check)
-		const client = createClient({ mode: "local" });
-		const list = await client.statusList.create({
-			id: "kyc-list",
-			url: "https://issuer.example.com/status/kyc",
-		});
-
-		// The credential wasn't issued with a status list entry, so revocation status will be unknown
-		const result = await client.credentials.verify({
-			credential: response.credential,
-			checkRevocation: true,
-			statusList: list,
-		});
-
-		// Signature is valid (we can resolve the did:key to get the public key)
-		expect(result.valid).toBe(true);
-		expect(result.claims.givenName).toBe("Alice");
-		expect(result.revocationStatus).toBe("unknown");
-	});
-});
 
 describe("status list credential export → verify round-trip", () => {
 	it("exported JWT can be independently verified", async () => {
