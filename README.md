@@ -17,7 +17,7 @@
   &middot;
   <a href="https://github.com/credat/credat">GitHub</a>
   &middot;
-  <a href="https://x.com/credatio">Twitter</a>
+  <a href="https://x.com/credat_dev">Twitter</a>
 </p>
 
 <div align="center">
