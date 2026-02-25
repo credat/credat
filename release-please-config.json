@@ -8,7 +8,9 @@
   "packages": {
     ".": {
       "changelog-path": "CHANGELOG.md",
-      "release-type": "node"
+      "release-type": "node",
+      "prerelease": true,
+      "prerelease-type": "alpha"
     }
   }
 }
