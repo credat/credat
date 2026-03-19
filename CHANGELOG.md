@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.2-alpha.1](https://github.com/credat/credat/compare/v0.2.1-alpha.1...v0.2.2-alpha.1) (2026-03-19)
+
+
+### Features
+
+* add delegation chains, constraint validation, status list storage, and hardened verification ([5a2795e](https://github.com/credat/credat/commit/5a2795eabf69a63c35c3f16750379d21548d1326))
+
+
+### Bug Fixes
+
+* correct Twitter handle to [@credat](https://github.com/credat)_dev ([21303dc](https://github.com/credat/credat/commit/21303dc60942fb0a44103decb9ff29bd9f698bde))
+* **deps:** update rollup to 4.59.0 to fix arbitrary file write vulnerability ([217d5a8](https://github.com/credat/credat/commit/217d5a80f59badff1ead48d90f15c1d83eb31a60))
+
 ## [0.2.1-alpha.1](https://github.com/credat/credat/compare/v0.2.0-alpha.1...v0.2.1-alpha.1) (2026-02-25)
 
 
