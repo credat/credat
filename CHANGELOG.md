@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.3-alpha.1](https://github.com/credat/credat/compare/v0.2.2-alpha.1...v0.2.3-alpha.1) (2026-03-19)
+
+
+### Bug Fixes
+
+* **ci:** always publish npm packages with latest tag ([ff3fdae](https://github.com/credat/credat/commit/ff3fdaecb9e11c700a49b1839630bee8b2baf561))
+
 ## [0.2.2-alpha.1](https://github.com/credat/credat/compare/v0.2.1-alpha.1...v0.2.2-alpha.1) (2026-03-19)
 
 
