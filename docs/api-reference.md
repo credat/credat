@@ -7,25 +7,25 @@ All internal modules are exported for full control. Import from `'credat'` for t
 ## Agent Identity
 
 ```typescript
-import { createAgent, loadAgent } from 'credat'
+import { createAgent, loadAgent } from '@credat/sdk'
 ```
 
 ## Delegation
 
 ```typescript
-import { delegate, verifyDelegation } from 'credat'
+import { delegate, verifyDelegation } from '@credat/sdk'
 ```
 
 ## Handshake Protocol
 
 ```typescript
-import { createChallenge, presentCredentials, verifyPresentation } from 'credat'
+import { createChallenge, presentCredentials, verifyPresentation } from '@credat/sdk'
 ```
 
 ## Scope Helpers
 
 ```typescript
-import { hasScope, hasAnyScope, hasAllScopes, getAllScopes, validateConstraints } from 'credat'
+import { hasScope, hasAnyScope, hasAllScopes, getAllScopes, validateConstraints } from '@credat/sdk'
 ```
 
 ## Crypto Primitives
@@ -39,7 +39,7 @@ import {
   jwkToPublicKey,
   base64urlToUint8Array,
   uint8ArrayToBase64url,
-} from 'credat'
+} from '@credat/sdk'
 ```
 
 ## SD-JWT VC (Credential Format)
@@ -49,7 +49,7 @@ import {
   createSdJwtVc,
   verifySdJwtVc,
   selectDisclosures,
-} from 'credat'
+} from '@credat/sdk'
 ```
 
 ## Status List (Revocation)
@@ -67,7 +67,7 @@ import {
   loadStatusList,
   deleteStatusList,
   listStatusLists,
-} from 'credat'
+} from '@credat/sdk'
 ```
 
 ## DID Operations
@@ -80,14 +80,14 @@ import {
   resolveDidWeb,
   didWebToUrl,
   resolveDID,
-} from 'credat'
+} from '@credat/sdk'
 ```
 
 ## Storage
 
 ```typescript
-import { MemoryStorage } from 'credat'
-import { SqliteStorage } from 'credat/sqlite' // optional peer dep
+import { MemoryStorage } from '@credat/sdk'
+import { SqliteStorage } from '@credat/sdk/sqlite' // optional peer dep
 ```
 
 ## Errors
@@ -101,7 +101,7 @@ import {
   CredentialError,
   DIDError,
   ErrorCodes,
-} from 'credat'
+} from '@credat/sdk'
 ```
 
 ## Types
@@ -128,5 +128,5 @@ import type {
   ErrorCode,
   StorageAdapter,
   // ... and more
-} from 'credat'
+} from '@credat/sdk'
 ```

@@ -10,7 +10,8 @@
       "changelog-path": "CHANGELOG.md",
       "release-type": "node",
       "prerelease": true,
-      "prerelease-type": "alpha"
+      "prerelease-type": "alpha",
+      "package-name": "@credat/sdk"
     }
   }
 }

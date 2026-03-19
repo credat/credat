@@ -14,7 +14,7 @@
 
 <div align="center">
 
-[![npm](https://img.shields.io/npm/v/credat?color=cb3837&logo=npm)](https://www.npmjs.com/package/credat)
+[![npm](https://img.shields.io/npm/v/@credat/sdk?color=cb3837&logo=npm)](https://www.npmjs.com/package/@credat/sdk)
 [![CI](https://github.com/credat/credat/actions/workflows/ci.yml/badge.svg)](https://github.com/credat/credat/actions)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-yellow.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)](https://www.typescriptlang.org/)
@@ -25,7 +25,7 @@
 <div align="center">
   <a href="https://docs.credat.io"><img src="https://img.shields.io/badge/Docs-credat.io-0066cc?style=for-the-badge" /></a>
   <a href="https://github.com/credat/credat/tree/main/examples"><img src="https://img.shields.io/badge/Examples-GitHub-24292e?style=for-the-badge&logo=github" /></a>
-  <a href="https://www.npmjs.com/package/credat"><img src="https://img.shields.io/badge/npm-credat-cb3837?style=for-the-badge&logo=npm" /></a>
+  <a href="https://www.npmjs.com/package/@credat/sdk"><img src="https://img.shields.io/badge/npm-@credat/sdk-cb3837?style=for-the-badge&logo=npm" /></a>
   <a href="https://github.com/credat/credat/discussions"><img src="https://img.shields.io/badge/Discussions-GitHub-24292e?style=for-the-badge&logo=github" /></a>
   <a href="https://x.com/credat_dev"><img src="https://img.shields.io/badge/Twitter-@credat__dev-000?style=for-the-badge&logo=x" /></a>
 </div>
@@ -44,14 +44,14 @@ An owner issues scoped credentials to an agent. A service verifies the agent's i
 ## Quick Start
 
 ```bash
-npm install credat
+npm install @credat/sdk
 ```
 
 ```typescript
 import {
   generateKeyPair, createDidWeb, createAgent, delegate,
   createChallenge, presentCredentials, verifyPresentation, hasScope
-} from 'credat'
+} from '@credat/sdk'
 
 // Owner identity
 const ownerKeyPair = generateKeyPair('ES256')
@@ -197,7 +197,7 @@ We follow [conventional commits](https://www.conventionalcommits.org/). Check ou
 ---
 
 <p align="center">
-  <a href="https://credat.io">credat.io</a> · <a href="https://docs.credat.io">Docs</a> · <a href="https://www.npmjs.com/package/credat">npm</a> · <a href="https://github.com/credat/credat/discussions">Discussions</a> · <a href="https://x.com/credat_dev">Twitter</a>
+  <a href="https://credat.io">credat.io</a> · <a href="https://docs.credat.io">Docs</a> · <a href="https://www.npmjs.com/package/@credat/sdk">npm</a> · <a href="https://github.com/credat/credat/discussions">Discussions</a> · <a href="https://x.com/credat_dev">Twitter</a>
 </p>
 
 <p align="center">

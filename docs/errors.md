@@ -9,7 +9,7 @@ Every error has a machine-readable code and a human-readable message. Error code
 Verification functions (`verifyPresentation`, `verifyDelegation`) return a result object instead of throwing:
 
 ```typescript
-import { ErrorCodes } from 'credat'
+import { ErrorCodes } from '@credat/sdk'
 
 const result = await verifyPresentation(presentation, options)
 

@@ -1,5 +1,8 @@
 {
-  "name": "credat",
+  "name": "@credat/sdk",
+  "publishConfig": {
+    "access": "public"
+  },
   "version": "0.2.2-alpha.1",
   "description": "Trust layer for AI agents — delegation, verification, and mutual trust using DIDs and Verifiable Credentials",
   "type": "module",

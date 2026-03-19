@@ -7,7 +7,7 @@ Credat supports two DID methods: `did:web` (domain-based, HTTPS-resolvable) and 
 ## did:web
 
 ```typescript
-import { createDidWeb, resolveDidWeb } from 'credat'
+import { createDidWeb, resolveDidWeb } from '@credat/sdk'
 
 // Simple domain
 const did = createDidWeb('example.com')
@@ -25,7 +25,7 @@ console.log(result.didDocument)
 ## did:key
 
 ```typescript
-import { createDidKey, resolveDidKey, generateKeyPair } from 'credat'
+import { createDidKey, resolveDidKey, generateKeyPair } from '@credat/sdk'
 
 const kp = generateKeyPair('ES256')
 const did = createDidKey(kp.publicKey, 'ES256')
@@ -39,7 +39,7 @@ console.log(result.didDocument)
 ## Universal Resolver
 
 ```typescript
-import { resolveDID } from 'credat'
+import { resolveDID } from '@credat/sdk'
 
 // Automatically routes to the correct method-specific resolver
 const result = await resolveDID('did:web:example.com')

@@ -43,7 +43,7 @@ if (result.valid && result.constraints?.maxTransactionValue) {
 You can also use the `validateConstraints` helper:
 
 ```typescript
-import { validateConstraints } from 'credat'
+import { validateConstraints } from '@credat/sdk'
 
 const violations = validateConstraints(result, {
   transactionValue: 6000,

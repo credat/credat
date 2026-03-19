@@ -7,7 +7,7 @@ Agents can be persisted and loaded later using pluggable storage adapters.
 ## In-Memory (default)
 
 ```typescript
-import { createAgent, loadAgent, MemoryStorage } from 'credat'
+import { createAgent, loadAgent, MemoryStorage } from '@credat/sdk'
 
 const storage = new MemoryStorage()
 
@@ -27,7 +27,7 @@ npm install better-sqlite3
 ```
 
 ```typescript
-import { SqliteStorage } from 'credat/sqlite'
+import { SqliteStorage } from '@credat/sdk/sqlite'
 
 const storage = new SqliteStorage('./agents.db')
 const agent = await createAgent({ domain: 'example.com', storage })
@@ -38,7 +38,7 @@ const agent = await createAgent({ domain: 'example.com', storage })
 Implement the `StorageAdapter` interface for any backend:
 
 ```typescript
-import type { StorageAdapter } from 'credat'
+import type { StorageAdapter } from '@credat/sdk'
 
 class MyStorage implements StorageAdapter {
   async get<T>(collection: string, key: string): Promise<T | null> { /* ... */ }
