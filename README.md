@@ -12,28 +12,34 @@
   Identity, delegation, and mutual verification — in a single package.
 </p>
 
-<p align="center">
-  <a href="https://github.com/credat/credat/tree/develop/examples">Examples</a>
-  &middot;
-  <a href="https://github.com/credat/credat">GitHub</a>
-  &middot;
-  <a href="https://x.com/credat_dev">Twitter</a>
-</p>
-
 <div align="center">
 
-[![npm version](https://img.shields.io/npm/v/credat?color=4f46e5&label=npm)](https://www.npmjs.com/package/credat)
-[![license](https://img.shields.io/github/license/credat/credat?color=4f46e5)](./LICENSE)
-[![build](https://img.shields.io/github/actions/workflow/status/credat/credat/ci.yml?branch=develop&label=tests)](https://github.com/credat/credat/actions)
-[![TypeScript](https://img.shields.io/badge/TypeScript-strict-4f46e5)](https://www.typescriptlang.org/)
+[![npm](https://img.shields.io/npm/v/credat?color=cb3837&logo=npm)](https://www.npmjs.com/package/credat)
+[![CI](https://github.com/credat/credat/actions/workflows/ci.yml/badge.svg)](https://github.com/credat/credat/actions)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-yellow.svg)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-22+-green?logo=node.js)](https://nodejs.org/)
 
+</div>
+
+<div align="center">
+  <a href="https://docs.credat.io"><img src="https://img.shields.io/badge/Docs-credat.io-0066cc?style=for-the-badge" /></a>
+  <a href="https://github.com/credat/credat/tree/main/examples"><img src="https://img.shields.io/badge/Examples-GitHub-24292e?style=for-the-badge&logo=github" /></a>
+  <a href="https://www.npmjs.com/package/credat"><img src="https://img.shields.io/badge/npm-credat-cb3837?style=for-the-badge&logo=npm" /></a>
+  <a href="https://github.com/credat/credat/discussions"><img src="https://img.shields.io/badge/Discussions-GitHub-24292e?style=for-the-badge&logo=github" /></a>
+  <a href="https://x.com/credat_dev"><img src="https://img.shields.io/badge/Twitter-@credat__dev-000?style=for-the-badge&logo=x" /></a>
 </div>
 
 ---
 
-Agents are everywhere — but how does one agent prove who it is to another? How does an owner limit what their agent can do? Credat solves this with DIDs, Verifiable Credentials, and a simple three-message handshake.
+> Your AI agent just mass-emailed 200 contacts, booked $12,000 in flights, and approved three vendor contracts.
+> You never authorized any of it.
 
-**~28KB bundled** · **2 dependencies** · **Zero config** · **Node.js 22+**
+Agents are multiplying. Authorization hasn't kept up. **Credat fixes that.**
+
+An owner issues scoped credentials to an agent. A service verifies the agent's identity and permissions before acting. Three messages. Cryptographic proof. Done.
+
+**~28KB bundled** · **2 dependencies** · **174 tests** · **Zero config** · **Node.js 22+**
 
 ## Quick Start
 
@@ -41,70 +47,48 @@ Agents are everywhere — but how does one agent prove who it is to another? How
 npm install credat
 ```
 
-### 1. Create an agent identity
-
 ```typescript
-import { createAgent, generateKeyPair, createDidWeb, delegate } from 'credat'
+import {
+  generateKeyPair, createDidWeb, createAgent, delegate,
+  createChallenge, presentCredentials, verifyPresentation, hasScope
+} from 'credat'
 
-// Owner creates their identity
+// Owner identity
 const ownerKeyPair = generateKeyPair('ES256')
 const ownerDid = createDidWeb('alice.example.com')
 
-// Owner creates an agent
-const agent = await createAgent({
-  domain: 'agents.alice.example.com',
-  path: 'assistant',
-})
+// Create an agent
+const agent = await createAgent({ domain: 'agents.alice.example.com', path: 'assistant' })
 
-console.log(agent.did) // did:web:agents.alice.example.com:assistant
-```
-
-### 2. Delegate scoped permissions
-
-```typescript
+// Delegate scoped permissions
 const delegation = await delegate({
   agent: agent.did,
   owner: ownerDid,
   ownerKeyPair,
   scopes: ['email:read', 'calendar:write', 'travel:book'],
-  constraints: {
-    maxTransactionValue: 1000,
-    allowedDomains: ['airline.example.com'],
-  },
-  validUntil: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+  constraints: { maxTransactionValue: 1000 },
+  validUntil: new Date(Date.now() + 86_400_000).toISOString(),
 })
-```
 
-### 3. Verify via handshake
-
-```typescript
-import { createChallenge, presentCredentials, verifyPresentation, hasScope } from 'credat'
-
-// Service challenges the agent
+// Service challenges the agent → Agent presents proof → Service verifies
 const challenge = createChallenge({ from: 'did:web:airline.example.com' })
-
-// Agent presents its delegation
-const presentation = await presentCredentials({
-  challenge,
-  delegation: delegation.token,
-  agent,
-})
-
-// Service verifies everything: nonce, signature, delegation chain, scopes
+const presentation = await presentCredentials({ challenge, delegation: delegation.token, agent })
 const result = await verifyPresentation(presentation, {
   challenge,
   ownerPublicKey: ownerKeyPair.publicKey,
   agentPublicKey: agent.keyPair.publicKey,
 })
 
-console.log(result.valid)                    // true
-console.log(result.scopes)                   // ['email:read', 'calendar:write', 'travel:book']
-console.log(hasScope(result, 'travel:book')) // true
+result.valid                    // true
+result.scopes                   // ['email:read', 'calendar:write', 'travel:book']
+hasScope(result, 'travel:book') // true
 ```
 
-That's it. The agent proved who it is. The service knows what it can do.
+The agent proved who it is. The service knows what it can do.
 
 ## How It Works
+
+An owner delegates permissions to an agent as a signed credential. When a service needs to trust the agent, they run a three-message handshake: challenge, presentation, verification.
 
 ```
 ┌─────────┐                        ┌─────────────┐
@@ -129,180 +113,56 @@ That's it. The agent proved who it is. The service knows what it can do.
 └─────────┘                        └──────┘
 ```
 
-**Step 1 — Delegation:** Owner issues an SD-JWT Verifiable Credential to the agent, encoding scopes and constraints.
-
-**Step 2 — Challenge:** Service sends a random nonce to the agent.
-
-**Step 3 — Presentation:** Agent signs the nonce with its private key and presents the delegation VC.
-
-**Step 4 — Verification:** Service verifies the nonce signature (proves the agent holds the key), the delegation VC signature (proves the owner issued it), and checks scopes/constraints/expiration.
+**Delegation** — Owner signs an SD-JWT VC encoding scopes and constraints.
+**Challenge** — Service sends a random nonce to the agent.
+**Presentation** — Agent signs the nonce and presents the delegation credential.
+**Verification** — Service verifies nonce signature, VC signature, scopes, and expiration.
 
 ## Features
 
 | Feature | Description |
 |---------|-------------|
-| **Agent Identity** | Create agent identities with `did:web` and auto-generated DID Documents |
-| **Delegation** | Issue scoped delegation credentials (SD-JWT VC) with constraints |
-| **Handshake** | Three-message challenge/presentation/verification protocol |
-| **Scope Helpers** | `hasScope`, `hasAnyScope`, `hasAllScopes`, `getAllScopes` |
+| **Agent Identity** | Create agent identities with `did:web` and `did:key`, auto-generated DID Documents |
+| **Delegation** | Issue scoped delegation credentials (SD-JWT VC) with constraints and expiration |
+| **Delegation Chains** | Agent → sub-agent delegation with scope subsetting and depth limits |
+| **Handshake** | Three-message challenge / presentation / verification protocol |
+| **Scope Helpers** | `hasScope`, `hasAnyScope`, `hasAllScopes`, `getAllScopes`, `validateConstraints` |
 | **Selective Disclosure** | Agents reveal only the scopes needed for each interaction |
 | **Revocation** | W3C Status List 2021 for credential revocation |
 | **Storage** | Pluggable storage (in-memory default, SQLite optional) |
 | **Crypto** | ES256 (P-256) and EdDSA (Ed25519) via `@noble/curves` |
 | **DIDs** | `did:web` and `did:key` — create and resolve |
-| **Type-Safe** | Full TypeScript strict mode, all types exported |
+| **Type-Safe** | Full TypeScript strict mode, discriminated unions, all types exported |
 | **Dual Build** | ESM + CommonJS, tree-shakeable |
 
-## Scopes & Constraints
+## Why Credat
 
-Scopes are strings — Credat doesn't prescribe a format. Use whatever makes sense for your domain:
+- 🔐 **Standards-based** — W3C DIDs + SD-JWT VC. Not proprietary. Your agents speak the same language as the rest of the identity ecosystem.
+- 📦 **Two dependencies** — `@noble/curves` and `@noble/hashes`. No blockchain. No cloud service. No vendor lock-in.
+- 🦺 **TypeScript-first** — Strict mode, discriminated unions, every type exported. Your IDE catches bugs before you run anything.
+- 🔌 **Transport-agnostic** — HTTP, WebSocket, DIDComm, message queue. Credat handles trust, you handle transport.
+- 🎯 **Scopes are yours** — Credat stores and verifies permission strings. Your domain defines what they mean.
 
-```typescript
-// Coarse
-scopes: ['read', 'write']
+*Think of it as the **Zod of agent trust** — small, typed, standards-based, does one thing well.*
 
-// Fine-grained
-scopes: ['email:read', 'calendar:write', 'travel:book']
+## Use Cases
 
-// Hierarchical
-scopes: ['org:acme:project:alpha:deploy']
-```
+- **AI Assistants** — Your agent books flights and sends emails. Credat proves to the airline API it has permission to act on your behalf.
+- **Multi-Agent Systems** — Agent A calls Agent B's API. The handshake lets them verify each other's identity and scopes before exchanging data.
+- **Customer Service Bots** — A support bot handles refunds up to $500. Delegation constraints enforce the spending limit cryptographically.
+- **Agent Marketplaces** — A platform hosts third-party agents, each scoped to exactly what the user authorized.
 
-Constraints are open-ended — Credat stores them, your app enforces them:
+## Ecosystem
 
-```typescript
-constraints: {
-  maxTransactionValue: 5000,      // dollars, tokens, whatever
-  allowedDomains: ['api.example.com'],
-  rateLimit: 100,                 // requests per hour
-  // add any field you need
-}
-```
+| Integration | Status |
+|-------------|--------|
+| Node.js / TypeScript | ✅ Available |
+| MCP (Model Context Protocol) | 🔨 In Progress |
+| LangChain / LangGraph | 🔨 In Progress |
+| OpenAI Agents SDK | 📋 Planned |
+| Vercel AI SDK | 📋 Planned |
 
-After verification, check constraints in your app:
-
-```typescript
-if (result.valid && result.constraints?.maxTransactionValue) {
-  if (txAmount > result.constraints.maxTransactionValue) {
-    throw new Error('Transaction exceeds agent limit')
-  }
-}
-```
-
-## Storage
-
-Agents can be persisted and loaded later:
-
-```typescript
-import { createAgent, loadAgent, MemoryStorage } from 'credat'
-
-const storage = new MemoryStorage()
-
-// Create and persist
-const agent = await createAgent({ domain: 'example.com', storage })
-
-// Load later
-const loaded = await loadAgent({ did: agent.did, storage })
-```
-
-For persistence across restarts, use SQLite (optional peer dependency):
-
-```bash
-npm install better-sqlite3
-```
-
-```typescript
-import { SqliteStorage } from 'credat/sqlite'
-
-const storage = new SqliteStorage('./agents.db')
-const agent = await createAgent({ domain: 'example.com', storage })
-```
-
-## DID Operations
-
-```typescript
-import { createDidWeb, createDidKey, resolveDID, generateKeyPair } from 'credat'
-
-// did:web — domain-based, resolvable via HTTPS
-const webDid = createDidWeb('example.com', 'agents/assistant')
-// → did:web:example.com:agents:assistant
-
-// did:key — self-contained, no network needed
-const kp = generateKeyPair('ES256')
-const keyDid = createDidKey(kp.publicKey, 'ES256')
-// → did:key:zDnae...
-
-// Resolve any DID
-const result = await resolveDID('did:web:example.com')
-console.log(result.didDocument)
-```
-
-## Error Handling
-
-Every error has a machine-readable code and a human-readable message:
-
-```typescript
-import { ErrorCodes } from 'credat'
-
-const result = await verifyPresentation(presentation, options)
-
-if (!result.valid) {
-  for (const error of result.errors) {
-    switch (error.code) {
-      case ErrorCodes.HANDSHAKE_EXPIRED:
-        // Challenge too old (default: 5 minutes)
-        break
-      case ErrorCodes.HANDSHAKE_INVALID_NONCE:
-        // Nonce mismatch — replay attack?
-        break
-      case ErrorCodes.HANDSHAKE_VERIFICATION_FAILED:
-        // Bad signature or presenter DID mismatch
-        break
-      case ErrorCodes.DELEGATION_EXPIRED:
-        // Delegation VC past its validUntil
-        break
-      case ErrorCodes.DELEGATION_NOT_YET_VALID:
-        // Delegation VC before its validFrom
-        break
-      case ErrorCodes.DELEGATION_SIGNATURE_INVALID:
-        // VC signature doesn't match owner's key
-        break
-    }
-  }
-}
-```
-
-## Advanced: Low-Level API
-
-All internal modules are exported for full control:
-
-```typescript
-import {
-  // Crypto primitives
-  generateKeyPair,
-  sign,
-  verifySignature,
-  publicKeyToJwk,
-  jwkToPublicKey,
-
-  // SD-JWT VC (credential format)
-  createSdJwtVc,
-  verifySdJwtVc,
-  selectDisclosures,
-
-  // Status List (revocation)
-  createStatusList,
-  setRevocationStatus,
-  isRevoked,
-
-  // DID operations
-  createDidKey,
-  resolveDidKey,
-  createDidWeb,
-  resolveDidWeb,
-  resolveDID,
-} from 'credat'
-```
+Want an integration? [Open an issue](https://github.com/credat/credat/issues) or [start a discussion](https://github.com/credat/credat/discussions).
 
 ## Specifications
 
@@ -316,23 +176,29 @@ import {
 
 ## Contributing
 
+Credat is young and moving fast. Contributions are welcome — whether it's a bug fix, a new integration, better docs, or just feedback.
+
 ```bash
 git clone https://github.com/credat/credat.git
 cd credat
 npm install
-npm test          # 109 tests
+npm test          # 174 tests
 npm run build     # ESM + CJS + .d.ts
 npm run typecheck # TypeScript strict
 npm run lint      # Biome
 ```
 
-We follow [conventional commits](https://www.conventionalcommits.org/).
+We follow [conventional commits](https://www.conventionalcommits.org/). Check out the [open issues](https://github.com/credat/credat/issues) to get started.
 
 ## License
 
 [Apache 2.0](./LICENSE) — free for commercial use.
 
 ---
+
+<p align="center">
+  <a href="https://credat.io">credat.io</a> · <a href="https://docs.credat.io">Docs</a> · <a href="https://www.npmjs.com/package/credat">npm</a> · <a href="https://github.com/credat/credat/discussions">Discussions</a> · <a href="https://x.com/credat_dev">Twitter</a>
+</p>
 
 <p align="center">
   Built by <a href="https://maximemansiet.fr">Maxime Mansiet</a> in Bordeaux, France.
