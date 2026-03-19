@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.3.0-alpha.1](https://github.com/credat/credat/compare/v0.2.2-alpha.1...v0.3.0-alpha.1) (2026-03-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* Package name changed from `credat` to `@credat/sdk`. Update imports: `import { ... } from '@credat/sdk'` SQLite subpath: `import { SqliteStorage } from '@credat/sdk/sqlite'`
+
+### Features
+
+* rename package from credat to @credat/sdk ([0541ce7](https://github.com/credat/credat/commit/0541ce75a96160f4b05ed7b74e1788a11ce5f93b))
+
+
+### Bug Fixes
+
+* **ci:** always publish npm packages with latest tag ([ff3fdae](https://github.com/credat/credat/commit/ff3fdaecb9e11c700a49b1839630bee8b2baf561))
+
 ## [0.2.2-alpha.1](https://github.com/credat/credat/compare/v0.2.1-alpha.1...v0.2.2-alpha.1) (2026-03-19)
 
 
