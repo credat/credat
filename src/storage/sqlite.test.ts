@@ -89,6 +89,21 @@ describe("SqliteStorage", () => {
 		if (existsSync(`${dbPath}-shm`)) unlinkSync(`${dbPath}-shm`);
 	});
 
+	it("returns empty array for non-existent collection", async () => {
+		const items = await storage.list("nonexistent");
+		expect(items).toEqual([]);
+	});
+
+	it("list returns keys and values", async () => {
+		await storage.set("creds", "id-1", { name: "Alice" });
+		await storage.set("creds", "id-2", { name: "Bob" });
+		const items = await storage.list<{ name: string }>("creds");
+		expect(items).toHaveLength(2);
+		const keys = items.map((i) => i.key).sort();
+		expect(keys).toEqual(["id-1", "id-2"]);
+		expect(items.find((i) => i.key === "id-1")?.value.name).toBe("Alice");
+	});
+
 	it("round-trips complex JSON values", async () => {
 		const complex = {
 			name: "Alice",

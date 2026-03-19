@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { DIDError, ErrorCodes } from "../../errors";
 import { createDidWeb, didWebToUrl, resolveDidWeb } from "./web";
 
 describe("didWebToUrl", () => {
@@ -60,6 +61,7 @@ describe("resolveDidWeb", () => {
 		expect(result.didDocument).toEqual(mockDocument);
 		expect(fetch).toHaveBeenCalledWith(
 			"https://example.com/.well-known/did.json",
+			expect.objectContaining({ signal: expect.any(AbortSignal) }),
 		);
 	});
 
@@ -72,5 +74,177 @@ describe("resolveDidWeb", () => {
 		const result = await resolveDidWeb("did:web:notfound.com");
 		expect(result.didDocument).toBeNull();
 		expect(result.didResolutionMetadata.error).toBe("notFound");
+	});
+
+	// === Issue #7: Timeout tests ===
+
+	it("throws DIDError on timeout", async () => {
+		global.fetch = vi.fn().mockImplementation((_url, options) => {
+			return new Promise((_resolve, reject) => {
+				const signal = options?.signal as AbortSignal | undefined;
+				if (signal) {
+					signal.addEventListener("abort", () => {
+						const err = new Error("The operation was aborted");
+						err.name = "AbortError";
+						reject(err);
+					});
+				}
+			});
+		}) as unknown as typeof fetch;
+
+		await expect(
+			resolveDidWeb("did:web:slow.example.com", { timeout: 10 }),
+		).rejects.toThrow(DIDError);
+
+		await expect(
+			resolveDidWeb("did:web:slow.example.com", { timeout: 10 }),
+		).rejects.toThrow(/timed out/);
+	});
+
+	it("timeout error includes URL and timeout value", async () => {
+		global.fetch = vi.fn().mockImplementation((_url, options) => {
+			return new Promise((_resolve, reject) => {
+				const signal = options?.signal as AbortSignal | undefined;
+				if (signal) {
+					signal.addEventListener("abort", () => {
+						const err = new Error("The operation was aborted");
+						err.name = "AbortError";
+						reject(err);
+					});
+				}
+			});
+		}) as unknown as typeof fetch;
+
+		try {
+			await resolveDidWeb("did:web:slow.example.com", { timeout: 50 });
+			expect.fail("Should have thrown");
+		} catch (e) {
+			expect(e).toBeInstanceOf(DIDError);
+			const err = e as DIDError;
+			expect(err.code).toBe(ErrorCodes.DID_RESOLUTION_FAILED);
+			expect(err.message).toContain("50ms");
+			expect(err.message).toContain("slow.example.com");
+		}
+	});
+
+	it("resolves normally when server responds within timeout", async () => {
+		const mockDocument = {
+			id: "did:web:fast.example.com",
+		};
+
+		global.fetch = vi.fn().mockResolvedValue({
+			ok: true,
+			json: () => Promise.resolve(mockDocument),
+		}) as unknown as typeof fetch;
+
+		const result = await resolveDidWeb("did:web:fast.example.com", {
+			timeout: 5000,
+		});
+		expect(result.didDocument).toEqual(mockDocument);
+	});
+
+	it("uses default 10s timeout when not specified", async () => {
+		const mockDocument = { id: "did:web:example.com" };
+
+		global.fetch = vi.fn().mockResolvedValue({
+			ok: true,
+			json: () => Promise.resolve(mockDocument),
+		}) as unknown as typeof fetch;
+
+		const result = await resolveDidWeb("did:web:example.com");
+		expect(result.didDocument).toEqual(mockDocument);
+	});
+
+	// === Issue #15: Error scenario tests ===
+
+	it("returns networkError for HTTP 500 response", async () => {
+		global.fetch = vi.fn().mockResolvedValue({
+			ok: false,
+			status: 500,
+		}) as unknown as typeof fetch;
+
+		const result = await resolveDidWeb("did:web:error.example.com");
+		expect(result.didDocument).toBeNull();
+		expect(result.didResolutionMetadata.error).toBe("networkError");
+	});
+
+	it("returns invalidDidDocument for malformed JSON response", async () => {
+		global.fetch = vi.fn().mockResolvedValue({
+			ok: true,
+			json: () => Promise.resolve({ notADid: true }),
+		}) as unknown as typeof fetch;
+
+		const result = await resolveDidWeb("did:web:malformed.example.com");
+		expect(result.didDocument).toBeNull();
+		expect(result.didResolutionMetadata.error).toBe("invalidDidDocument");
+	});
+
+	it("returns error for non-JSON response body", async () => {
+		global.fetch = vi.fn().mockResolvedValue({
+			ok: true,
+			json: () => Promise.reject(new Error("Unexpected token")),
+		}) as unknown as typeof fetch;
+
+		const result = await resolveDidWeb("did:web:badjson.example.com");
+		expect(result.didDocument).toBeNull();
+		expect(result.didResolutionMetadata.error).toContain("networkError");
+	});
+
+	it("returns error for connection refused / DNS failure", async () => {
+		global.fetch = vi
+			.fn()
+			.mockRejectedValue(
+				new TypeError("fetch failed: ECONNREFUSED"),
+			) as unknown as typeof fetch;
+
+		const result = await resolveDidWeb("did:web:unreachable.example.com");
+		expect(result.didDocument).toBeNull();
+		expect(result.didResolutionMetadata.error).toContain("networkError");
+		expect(result.didResolutionMetadata.error).toContain("ECONNREFUSED");
+	});
+
+	it("returns error for empty response body", async () => {
+		global.fetch = vi.fn().mockResolvedValue({
+			ok: true,
+			json: () => Promise.resolve(null),
+		}) as unknown as typeof fetch;
+
+		const result = await resolveDidWeb("did:web:empty.example.com");
+		expect(result.didDocument).toBeNull();
+		expect(result.didResolutionMetadata.error).toBe("invalidDidDocument");
+	});
+
+	it("returns invalidDidDocument for DID document missing id field", async () => {
+		global.fetch = vi.fn().mockResolvedValue({
+			ok: true,
+			json: () =>
+				Promise.resolve({ verificationMethod: [], authentication: [] }),
+		}) as unknown as typeof fetch;
+
+		const result = await resolveDidWeb("did:web:noid.example.com");
+		expect(result.didDocument).toBeNull();
+		expect(result.didResolutionMetadata.error).toBe("invalidDidDocument");
+	});
+
+	it("returns invalidDidDocument when id is not a DID", async () => {
+		global.fetch = vi.fn().mockResolvedValue({
+			ok: true,
+			json: () => Promise.resolve({ id: "not-a-did" }),
+		}) as unknown as typeof fetch;
+
+		const result = await resolveDidWeb("did:web:badid.example.com");
+		expect(result.didDocument).toBeNull();
+		expect(result.didResolutionMetadata.error).toBe("invalidDidDocument");
+	});
+
+	it("returns networkError for HTTP 503 response", async () => {
+		global.fetch = vi.fn().mockResolvedValue({
+			ok: false,
+			status: 503,
+		}) as unknown as typeof fetch;
+
+		const result = await resolveDidWeb("did:web:unavailable.example.com");
+		expect(result.didDocument).toBeNull();
+		expect(result.didResolutionMetadata.error).toBe("networkError");
 	});
 });

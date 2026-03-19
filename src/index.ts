@@ -65,16 +65,27 @@ export { presentCredentials } from "./handshake/present";
 export type { VerifyPresentationOptions } from "./handshake/verify";
 export { verifyPresentation } from "./handshake/verify";
 // ── Scopes ──
-export type { HasScopes } from "./scopes/helpers";
+export type {
+	ConstraintContext,
+	ConstraintViolation,
+	HasScopes,
+} from "./scopes/helpers";
 export {
 	getAllScopes,
 	hasAllScopes,
 	hasAnyScope,
 	hasScope,
+	validateConstraints,
 } from "./scopes/helpers";
 
 // ── Storage ──
 export { MemoryStorage } from "./storage/memory";
+export {
+	deleteStatusList,
+	listStatusLists,
+	loadStatusList,
+	saveStatusList,
+} from "./storage/status-list";
 export type { StorageAdapter } from "./storage/types";
 
 // ── Types ──

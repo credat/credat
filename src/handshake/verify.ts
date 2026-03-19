@@ -39,7 +39,22 @@ export async function verifyPresentation(
 
 	// 1. Check challenge freshness
 	const maxAge = options.challengeMaxAgeMs ?? DEFAULT_CHALLENGE_MAX_AGE_MS;
-	const challengeAge = Date.now() - new Date(challenge.timestamp).getTime();
+	const challengeTime = new Date(challenge.timestamp).getTime();
+
+	if (Number.isNaN(challengeTime)) {
+		errors.push({
+			code: ErrorCodes.HANDSHAKE_EXPIRED,
+			message: `Challenge has an unparseable timestamp: "${challenge.timestamp}"`,
+		});
+
+		return {
+			valid: false,
+			agent: presentation.from,
+			errors,
+		};
+	}
+
+	const challengeAge = Date.now() - challengeTime;
 	if (challengeAge > maxAge) {
 		errors.push({
 			code: ErrorCodes.HANDSHAKE_EXPIRED,

@@ -178,4 +178,106 @@ describe("verifyPresentation", () => {
 			),
 		).toBe(true);
 	});
+
+	// === Issue #8: Invalid timestamp tests ===
+
+	it("rejects challenge with garbage timestamp", async () => {
+		const agent = await createAgent({ domain: "agent.example.com" });
+		const ownerKeyPair = generateKeyPair("ES256");
+		const ownerDid = createDidWeb("owner.example.com");
+
+		const delegation = await delegate({
+			agent: agent.did,
+			owner: ownerDid,
+			ownerKeyPair,
+			scopes: ["book:travel"],
+		});
+
+		const challenge = createChallenge({ from: "did:web:service.example.com" });
+		challenge.timestamp = "not-a-date";
+
+		const presentation = await presentCredentials({
+			challenge,
+			delegation: delegation.token,
+			agent,
+		});
+
+		const result = await verifyPresentation(presentation, {
+			challenge,
+			ownerPublicKey: ownerKeyPair.publicKey,
+			agentPublicKey: agent.keyPair.publicKey,
+		});
+
+		expect(result.valid).toBe(false);
+		expect(
+			result.errors.some((e) => e.code === ErrorCodes.HANDSHAKE_EXPIRED),
+		).toBe(true);
+		expect(result.errors.some((e) => e.message.includes("unparseable"))).toBe(
+			true,
+		);
+	});
+
+	it("rejects challenge with empty timestamp", async () => {
+		const agent = await createAgent({ domain: "agent.example.com" });
+		const ownerKeyPair = generateKeyPair("ES256");
+		const ownerDid = createDidWeb("owner.example.com");
+
+		const delegation = await delegate({
+			agent: agent.did,
+			owner: ownerDid,
+			ownerKeyPair,
+			scopes: ["book:travel"],
+		});
+
+		const challenge = createChallenge({ from: "did:web:service.example.com" });
+		challenge.timestamp = "";
+
+		const presentation = await presentCredentials({
+			challenge,
+			delegation: delegation.token,
+			agent,
+		});
+
+		const result = await verifyPresentation(presentation, {
+			challenge,
+			ownerPublicKey: ownerKeyPair.publicKey,
+			agentPublicKey: agent.keyPair.publicKey,
+		});
+
+		expect(result.valid).toBe(false);
+		expect(
+			result.errors.some((e) => e.code === ErrorCodes.HANDSHAKE_EXPIRED),
+		).toBe(true);
+	});
+
+	it("accepts challenge with valid ISO timestamp", async () => {
+		const agent = await createAgent({ domain: "agent.example.com" });
+		const ownerKeyPair = generateKeyPair("ES256");
+		const ownerDid = createDidWeb("owner.example.com");
+
+		const delegation = await delegate({
+			agent: agent.did,
+			owner: ownerDid,
+			ownerKeyPair,
+			scopes: ["book:travel"],
+		});
+
+		const challenge = createChallenge({ from: "did:web:service.example.com" });
+		// Valid timestamp, just set explicitly
+		challenge.timestamp = new Date().toISOString();
+
+		const presentation = await presentCredentials({
+			challenge,
+			delegation: delegation.token,
+			agent,
+		});
+
+		const result = await verifyPresentation(presentation, {
+			challenge,
+			ownerPublicKey: ownerKeyPair.publicKey,
+			agentPublicKey: agent.keyPair.publicKey,
+		});
+
+		expect(result.valid).toBe(true);
+	});
 });

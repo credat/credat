@@ -1,3 +1,4 @@
+import { DIDError, ErrorCodes } from "../../errors";
 import type { DIDDocument, DIDResolutionResult } from "../../types";
 
 export function didWebToUrl(did: string): string {
@@ -26,10 +27,18 @@ function isValidDIDDocument(doc: unknown): doc is DIDDocument {
 	return typeof obj.id === "string" && obj.id.startsWith("did:");
 }
 
-export async function resolveDidWeb(did: string): Promise<DIDResolutionResult> {
+export async function resolveDidWeb(
+	did: string,
+	options?: { timeout?: number },
+): Promise<DIDResolutionResult> {
+	const timeout = options?.timeout ?? 10_000;
+	const url = didWebToUrl(did);
+	const controller = new AbortController();
+	const timeoutId = setTimeout(() => controller.abort(), timeout);
+
 	try {
-		const url = didWebToUrl(did);
-		const response = await fetch(url);
+		const response = await fetch(url, { signal: controller.signal });
+		clearTimeout(timeoutId);
 
 		if (!response.ok) {
 			const error = response.status === 404 ? "notFound" : "networkError";
@@ -56,6 +65,15 @@ export async function resolveDidWeb(did: string): Promise<DIDResolutionResult> {
 			didDocumentMetadata: {},
 		};
 	} catch (error) {
+		clearTimeout(timeoutId);
+
+		if (controller.signal.aborted) {
+			throw new DIDError(
+				ErrorCodes.DID_RESOLUTION_FAILED,
+				`DID resolution timed out after ${timeout}ms for ${did} (URL: ${url})`,
+			);
+		}
+
 		const detail = error instanceof Error ? `: ${error.message}` : "";
 		return {
 			didDocument: null,

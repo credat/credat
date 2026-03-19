@@ -72,4 +72,114 @@ describe("delegate", () => {
 			}),
 		).rejects.toThrow();
 	});
+
+	// === Issue #14: Chain delegation issuance ===
+
+	it("issues a chain delegation with parentDelegation", async () => {
+		const ownerKeyPair = generateKeyPair("ES256");
+		const agentKeyPair = generateKeyPair("ES256");
+		const ownerDid = createDidWeb("owner.example.com");
+		const agentDid = createDidWeb("agent.example.com");
+		const subAgentDid = createDidWeb("sub-agent.example.com");
+
+		const parentDelegation = await delegate({
+			agent: agentDid,
+			owner: ownerDid,
+			ownerKeyPair,
+			scopes: ["book:travel", "read:email"],
+		});
+
+		const childDelegation = await delegate({
+			agent: subAgentDid,
+			owner: agentDid,
+			ownerKeyPair: agentKeyPair,
+			scopes: ["book:travel"],
+			parentDelegation: {
+				token: parentDelegation.token,
+				parentOwnerPublicKey: ownerKeyPair.publicKey,
+			},
+		});
+
+		expect(childDelegation.token).toBeDefined();
+		expect(childDelegation.token).toContain("~");
+		expect(childDelegation.claims.agent).toBe(subAgentDid);
+		expect(childDelegation.claims.scopes).toEqual(["book:travel"]);
+	});
+
+	it("rejects chain delegation with scope escalation", async () => {
+		const ownerKeyPair = generateKeyPair("ES256");
+		const agentKeyPair = generateKeyPair("ES256");
+		const ownerDid = createDidWeb("owner.example.com");
+		const agentDid = createDidWeb("agent.example.com");
+		const subAgentDid = createDidWeb("sub-agent.example.com");
+
+		const parentDelegation = await delegate({
+			agent: agentDid,
+			owner: ownerDid,
+			ownerKeyPair,
+			scopes: ["book:travel"],
+		});
+
+		await expect(
+			delegate({
+				agent: subAgentDid,
+				owner: agentDid,
+				ownerKeyPair: agentKeyPair,
+				scopes: ["book:travel", "admin:all"],
+				parentDelegation: {
+					token: parentDelegation.token,
+					parentOwnerPublicKey: ownerKeyPair.publicKey,
+				},
+			}),
+		).rejects.toThrow(/not in parent/i);
+	});
+
+	it("rejects chain delegation exceeding max depth", async () => {
+		const ownerKeyPair = generateKeyPair("ES256");
+		const agentKeyPair = generateKeyPair("ES256");
+		const ownerDid = createDidWeb("owner.example.com");
+		const agentDid = createDidWeb("agent.example.com");
+		const subAgentDid = createDidWeb("sub-agent.example.com");
+
+		const parentDelegation = await delegate({
+			agent: agentDid,
+			owner: ownerDid,
+			ownerKeyPair,
+			scopes: ["book:travel"],
+		});
+
+		await expect(
+			delegate({
+				agent: subAgentDid,
+				owner: agentDid,
+				ownerKeyPair: agentKeyPair,
+				scopes: ["book:travel"],
+				parentDelegation: {
+					token: parentDelegation.token,
+					parentOwnerPublicKey: ownerKeyPair.publicKey,
+				},
+				maxChainDepth: 0,
+			}),
+		).rejects.toThrow(/chain depth/i);
+	});
+
+	it("rejects chain delegation with invalid parent token", async () => {
+		const agentKeyPair = generateKeyPair("ES256");
+		const ownerKeyPair = generateKeyPair("ES256");
+		const agentDid = createDidWeb("agent.example.com");
+		const subAgentDid = createDidWeb("sub-agent.example.com");
+
+		await expect(
+			delegate({
+				agent: subAgentDid,
+				owner: agentDid,
+				ownerKeyPair: agentKeyPair,
+				scopes: ["book:travel"],
+				parentDelegation: {
+					token: "invalid.token.here~",
+					parentOwnerPublicKey: ownerKeyPair.publicKey,
+				},
+			}),
+		).rejects.toThrow(/parent delegation is invalid/i);
+	});
 });

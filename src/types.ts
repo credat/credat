@@ -112,6 +112,11 @@ export interface DelegateOptions {
 	validFrom?: string;
 	validUntil?: string;
 	statusList?: { url: string; index: number };
+	parentDelegation?: {
+		token: string;
+		parentOwnerPublicKey: Uint8Array;
+	};
+	maxChainDepth?: number;
 }
 
 export interface DelegationConstraints {

@@ -1,4 +1,5 @@
 import { createSdJwtVc } from "../credentials/formats/sd-jwt-vc";
+import { base64urlToUint8Array } from "../crypto/keys";
 import { DelegationError, ErrorCodes } from "../errors";
 import type {
 	CredentialClaims,
@@ -8,6 +9,31 @@ import type {
 } from "../types";
 
 const DELEGATION_VC_TYPE = "AgentDelegationCredential";
+const DEFAULT_MAX_CHAIN_DEPTH = 3;
+
+function getChainDepth(token: string): number {
+	let depth = 0;
+	let current = token;
+
+	while (true) {
+		try {
+			const parts = current.split("~");
+			const jwt = parts[0] ?? "";
+			const payloadB64 = jwt.split(".")[1] ?? "";
+			const payload = JSON.parse(
+				new TextDecoder().decode(base64urlToUint8Array(payloadB64)),
+			) as Record<string, unknown>;
+
+			if (typeof payload._parentDelegation !== "string") break;
+			depth++;
+			current = payload._parentDelegation;
+		} catch {
+			break;
+		}
+	}
+
+	return depth;
+}
 
 export async function delegate(
 	options: DelegateOptions,
@@ -29,6 +55,45 @@ export async function delegate(
 		);
 	}
 
+	// Handle chain delegation
+	if (options.parentDelegation) {
+		const { token: parentToken, parentOwnerPublicKey } =
+			options.parentDelegation;
+
+		// Verify the parent delegation
+		const { verifyDelegation } = await import("./verify");
+		const parentResult = await verifyDelegation(parentToken, {
+			ownerPublicKey: parentOwnerPublicKey,
+		});
+
+		if (!parentResult.valid) {
+			throw new DelegationError(
+				ErrorCodes.DELEGATION_INVALID,
+				"Parent delegation is invalid",
+			);
+		}
+
+		// Enforce scope subsetting
+		const parentScopes = new Set(parentResult.scopes);
+		const invalidScopes = scopes.filter((s) => !parentScopes.has(s));
+		if (invalidScopes.length > 0) {
+			throw new DelegationError(
+				ErrorCodes.DELEGATION_SCOPE_INVALID,
+				`Scopes not in parent delegation: ${invalidScopes.join(", ")}`,
+			);
+		}
+
+		// Check chain depth
+		const maxDepth = options.maxChainDepth ?? DEFAULT_MAX_CHAIN_DEPTH;
+		const currentDepth = getChainDepth(parentToken) + 1;
+		if (currentDepth > maxDepth) {
+			throw new DelegationError(
+				ErrorCodes.DELEGATION_INVALID,
+				`Delegation chain depth ${currentDepth} exceeds maximum ${maxDepth}`,
+			);
+		}
+	}
+
 	const claims: CredentialClaims = {
 		agent,
 		owner,
@@ -45,6 +110,10 @@ export async function delegate(
 
 	if (validUntil) {
 		claims.validUntil = validUntil;
+	}
+
+	if (options.parentDelegation) {
+		claims._parentDelegation = options.parentDelegation.token;
 	}
 
 	const selectiveDisclosure = ["scopes"];
