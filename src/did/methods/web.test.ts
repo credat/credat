@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DIDError, ErrorCodes } from "../../errors";
+import { DIDCache } from "../cache";
 import { createDidWeb, didWebToUrl, resolveDidWeb } from "./web";
 
 describe("didWebToUrl", () => {
@@ -246,5 +247,58 @@ describe("resolveDidWeb", () => {
 		const result = await resolveDidWeb("did:web:unavailable.example.com");
 		expect(result.didDocument).toBeNull();
 		expect(result.didResolutionMetadata.error).toBe("networkError");
+	});
+
+	// === Issue #18: Cache integration tests ===
+
+	it("returns cached result on second call", async () => {
+		const mockDocument = { id: "did:web:cached.example.com" };
+
+		global.fetch = vi.fn().mockResolvedValue({
+			ok: true,
+			json: () => Promise.resolve(mockDocument),
+		}) as unknown as typeof fetch;
+
+		const cache = new DIDCache({ ttlMs: 60_000 });
+
+		const result1 = await resolveDidWeb("did:web:cached.example.com", {
+			cache,
+		});
+		const result2 = await resolveDidWeb("did:web:cached.example.com", {
+			cache,
+		});
+
+		expect(result1.didDocument).toEqual(mockDocument);
+		expect(result2.didDocument).toEqual(mockDocument);
+		// fetch should only be called once — second call served from cache
+		expect(fetch).toHaveBeenCalledTimes(1);
+	});
+
+	it("does not cache failed resolutions", async () => {
+		global.fetch = vi.fn().mockResolvedValue({
+			ok: false,
+			status: 404,
+		}) as unknown as typeof fetch;
+
+		const cache = new DIDCache({ ttlMs: 60_000 });
+
+		await resolveDidWeb("did:web:notfound.com", { cache });
+		await resolveDidWeb("did:web:notfound.com", { cache });
+
+		// Both calls should hit the network
+		expect(fetch).toHaveBeenCalledTimes(2);
+	});
+
+	it("resolves without cache (backwards-compatible)", async () => {
+		const mockDocument = { id: "did:web:example.com" };
+
+		global.fetch = vi.fn().mockResolvedValue({
+			ok: true,
+			json: () => Promise.resolve(mockDocument),
+		}) as unknown as typeof fetch;
+
+		// No cache option — should work exactly as before
+		const result = await resolveDidWeb("did:web:example.com");
+		expect(result.didDocument).toEqual(mockDocument);
 	});
 });

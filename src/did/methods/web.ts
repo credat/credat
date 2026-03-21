@@ -1,5 +1,6 @@
 import { DIDError, ErrorCodes } from "../../errors";
 import type { DIDDocument, DIDResolutionResult } from "../../types";
+import type { DIDCache } from "../cache";
 
 export function didWebToUrl(did: string): string {
 	const parts = did.replace("did:web:", "").split(":");
@@ -27,10 +28,21 @@ function isValidDIDDocument(doc: unknown): doc is DIDDocument {
 	return typeof obj.id === "string" && obj.id.startsWith("did:");
 }
 
+export interface ResolveDidWebOptions {
+	timeout?: number;
+	cache?: DIDCache;
+}
+
 export async function resolveDidWeb(
 	did: string,
-	options?: { timeout?: number },
+	options?: ResolveDidWebOptions,
 ): Promise<DIDResolutionResult> {
+	// Check cache first
+	if (options?.cache) {
+		const cached = options.cache.get(did);
+		if (cached) return cached;
+	}
+
 	const timeout = options?.timeout ?? 10_000;
 	const url = didWebToUrl(did);
 	const controller = new AbortController();
@@ -59,11 +71,18 @@ export async function resolveDidWeb(
 			};
 		}
 
-		return {
+		const result: DIDResolutionResult = {
 			didDocument: body,
 			didResolutionMetadata: {},
 			didDocumentMetadata: {},
 		};
+
+		// Cache successful resolutions
+		if (options?.cache) {
+			options.cache.set(did, result);
+		}
+
+		return result;
 	} catch (error) {
 		clearTimeout(timeoutId);
 

@@ -40,12 +40,16 @@ export { delegate } from "./delegation/issue";
 export type { VerifyDelegationOptions } from "./delegation/verify";
 export { verifyDelegation } from "./delegation/verify";
 // ── Low-level: DID ──
+export type { DIDCacheOptions } from "./did/cache";
+export { DIDCache } from "./did/cache";
 export { createDidKey, resolveDidKey } from "./did/methods/key";
+export type { ResolveDidWebOptions } from "./did/methods/web";
 export {
 	createDidWeb,
 	didWebToUrl,
 	resolveDidWeb,
 } from "./did/methods/web";
+export type { ResolveDIDOptions } from "./did/resolver";
 export { resolveDID } from "./did/resolver";
 // ── Errors ──
 export type { ErrorCode } from "./errors";
