@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { generateKeyPair } from "../../crypto/keys";
+import { base64urlToUint8Array, generateKeyPair } from "../../crypto/keys";
 import {
 	createStatusList,
 	createStatusListCredential,
@@ -150,7 +150,7 @@ describe("Status List", () => {
 
 	// === encode / decode ===
 
-	it("round-trips encode/decode", () => {
+	it("round-trips encode/decode", async () => {
 		const list = createStatusList({
 			id: "list-1",
 			issuer: "did:key:z123",
@@ -159,31 +159,28 @@ describe("Status List", () => {
 		setRevocationStatus(list, 0, true);
 		setRevocationStatus(list, 42, true);
 
-		const encoded = encodeStatusList(list.bitstring);
+		const encoded = await encodeStatusList(list.bitstring);
 		expect(typeof encoded).toBe("string");
 
-		const decoded = decodeStatusList(encoded);
+		const decoded = await decodeStatusList(encoded);
 		expect(decoded).toEqual(list.bitstring);
 	});
 
-	it("compresses efficiently (mostly-zero bitstring)", () => {
+	it("compresses efficiently (mostly-zero bitstring)", async () => {
 		const list = createStatusList({
 			id: "list-1",
 			issuer: "did:key:z123",
 			url: "https://example.com/status/1",
 		});
-		const encoded = encodeStatusList(list.bitstring);
+		const encoded = await encodeStatusList(list.bitstring);
 		// Gzip of 16KB of zeros should be much smaller than 16KB
-		const compressedBytes = Buffer.from(
-			encoded.replace(/-/g, "+").replace(/_/g, "/"),
-			"base64",
-		);
+		const compressedBytes = base64urlToUint8Array(encoded);
 		expect(compressedBytes.length).toBeLessThan(list.bitstring.length / 2);
 	});
 
 	// === JWT create / verify ===
 
-	it("creates and verifies a status list credential JWT", () => {
+	it("creates and verifies a status list credential JWT", async () => {
 		const keyPair = generateKeyPair("ES256");
 		const list = createStatusList({
 			id: "list-1",
@@ -192,7 +189,7 @@ describe("Status List", () => {
 		});
 		setRevocationStatus(list, 42, true);
 
-		const jwt = createStatusListCredential({
+		const jwt = await createStatusListCredential({
 			list,
 			issuerPrivateKey: keyPair.privateKey,
 			url: "https://example.com/status/1",
@@ -201,7 +198,7 @@ describe("Status List", () => {
 		expect(typeof jwt).toBe("string");
 		expect(jwt.split(".").length).toBe(3);
 
-		const result = verifyStatusListCredential(jwt, keyPair.publicKey);
+		const result = await verifyStatusListCredential(jwt, keyPair.publicKey);
 		expect(result.valid).toBe(true);
 		expect(result.issuer).toBe("did:key:z123");
 		expect(result.bitstring).toBeDefined();
@@ -214,7 +211,7 @@ describe("Status List", () => {
 		expect(isRevoked(reconstructed, 0)).toBe(false);
 	});
 
-	it("rejects tampered JWT", () => {
+	it("rejects tampered JWT", async () => {
 		const keyPair = generateKeyPair("ES256");
 		const list = createStatusList({
 			id: "list-1",
@@ -222,7 +219,7 @@ describe("Status List", () => {
 			url: "https://example.com/status/1",
 		});
 
-		const jwt = createStatusListCredential({
+		const jwt = await createStatusListCredential({
 			list,
 			issuerPrivateKey: keyPair.privateKey,
 			url: "https://example.com/status/1",
@@ -231,11 +228,14 @@ describe("Status List", () => {
 		// Tamper with the payload
 		const parts = jwt.split(".");
 		const tampered = `${parts[0]}.${parts[1]}x.${parts[2]}`;
-		const result = verifyStatusListCredential(tampered, keyPair.publicKey);
+		const result = await verifyStatusListCredential(
+			tampered,
+			keyPair.publicKey,
+		);
 		expect(result.valid).toBe(false);
 	});
 
-	it("rejects JWT signed with wrong key", () => {
+	it("rejects JWT signed with wrong key", async () => {
 		const issuerKeys = generateKeyPair("ES256");
 		const wrongKeys = generateKeyPair("ES256");
 		const list = createStatusList({
@@ -244,13 +244,13 @@ describe("Status List", () => {
 			url: "https://example.com/status/1",
 		});
 
-		const jwt = createStatusListCredential({
+		const jwt = await createStatusListCredential({
 			list,
 			issuerPrivateKey: issuerKeys.privateKey,
 			url: "https://example.com/status/1",
 		});
 
-		const result = verifyStatusListCredential(jwt, wrongKeys.publicKey);
+		const result = await verifyStatusListCredential(jwt, wrongKeys.publicKey);
 		expect(result.valid).toBe(false);
 		expect(result.errors).toBeDefined();
 	});

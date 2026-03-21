@@ -68,7 +68,7 @@
     "url": "https://github.com/credat/credat/issues"
   },
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=18.0.0"
   },
   "dependencies": {
     "@noble/curves": "^2.0.1",

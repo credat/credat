@@ -1,4 +1,3 @@
-import { gunzipSync, gzipSync } from "node:zlib";
 import type { Algorithm } from "../../crypto/keys";
 import {
 	base64urlToUint8Array,
@@ -81,14 +80,28 @@ export function isRevoked(list: StatusListData, index: number): boolean {
 	return ((list.bitstring[byteIndex] ?? 0) & bitMask) !== 0;
 }
 
-export function encodeStatusList(bitstring: Uint8Array): string {
-	const compressed = gzipSync(bitstring);
+async function compress(data: Uint8Array): Promise<Uint8Array> {
+	const stream = new Blob([data as Uint8Array<ArrayBuffer>])
+		.stream()
+		.pipeThrough(new CompressionStream("gzip"));
+	return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+async function decompress(data: Uint8Array): Promise<Uint8Array> {
+	const stream = new Blob([data as Uint8Array<ArrayBuffer>])
+		.stream()
+		.pipeThrough(new DecompressionStream("gzip"));
+	return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+export async function encodeStatusList(bitstring: Uint8Array): Promise<string> {
+	const compressed = await compress(bitstring);
 	return uint8ArrayToBase64url(compressed);
 }
 
-export function decodeStatusList(encoded: string): Uint8Array {
+export async function decodeStatusList(encoded: string): Promise<Uint8Array> {
 	const compressed = base64urlToUint8Array(encoded);
-	return new Uint8Array(gunzipSync(compressed));
+	return decompress(compressed);
 }
 
 export interface CreateStatusListCredentialOptions {
@@ -98,9 +111,9 @@ export interface CreateStatusListCredentialOptions {
 	algorithm?: Algorithm;
 }
 
-export function createStatusListCredential(
+export async function createStatusListCredential(
 	options: CreateStatusListCredentialOptions,
-): string {
+): Promise<string> {
 	const { list, issuerPrivateKey, url, algorithm = "ES256" } = options;
 
 	const header = {
@@ -108,7 +121,7 @@ export function createStatusListCredential(
 		typ: "statuslist+jwt",
 	};
 
-	const encoded = encodeStatusList(list.bitstring);
+	const encoded = await encodeStatusList(list.bitstring);
 
 	const payload: Record<string, unknown> = {
 		iss: list.issuer,
@@ -136,10 +149,10 @@ export interface VerifyStatusListCredentialResult {
 	errors?: string[];
 }
 
-export function verifyStatusListCredential(
+export async function verifyStatusListCredential(
 	jwt: string,
 	publicKey: Uint8Array,
-): VerifyStatusListCredentialResult {
+): Promise<VerifyStatusListCredentialResult> {
 	// Parse phase — malformed input is expected
 	let headerB64: string;
 	let payloadB64: string;
@@ -187,7 +200,7 @@ export function verifyStatusListCredential(
 		return { valid: false, errors: ["Missing status_list.lst"] };
 	}
 
-	const bitstring = decodeStatusList(payload.status_list.lst);
+	const bitstring = await decodeStatusList(payload.status_list.lst);
 
 	return {
 		valid: true,

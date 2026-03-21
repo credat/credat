@@ -79,13 +79,22 @@ export function jwkToPublicKey(jwk: JsonWebKey): Uint8Array {
 	throw new Error(`Unsupported JWK: kty=${jwk.kty}, crv=${jwk.crv}`);
 }
 
-// Base64url helpers
+// Base64url helpers (isomorphic — no Buffer dependency)
 export function uint8ArrayToBase64url(bytes: Uint8Array): string {
-	const base64 = Buffer.from(bytes).toString("base64");
+	let binary = "";
+	for (let i = 0; i < bytes.length; i++) {
+		binary += String.fromCharCode(bytes[i] ?? 0);
+	}
+	const base64 = btoa(binary);
 	return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 export function base64urlToUint8Array(base64url: string): Uint8Array {
 	const base64 = base64url.replace(/-/g, "+").replace(/_/g, "/");
-	return new Uint8Array(Buffer.from(base64, "base64"));
+	const binary = atob(base64);
+	const bytes = new Uint8Array(binary.length);
+	for (let i = 0; i < binary.length; i++) {
+		bytes[i] = binary.charCodeAt(i);
+	}
+	return bytes;
 }
