@@ -1,5 +1,5 @@
 // Credat — Trust layer for AI agents
-export const VERSION = "0.2.0-alpha.1";
+export const VERSION = "0.3.0-alpha.1";
 
 // ── Agent Identity ──
 export { createAgent } from "./agent/create";
