@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { AgentError, ErrorCodes } from "../errors";
+import type { StorageAdapter } from "../types";
 import { MemoryStorage } from "../storage/memory";
 import { createAgent } from "./create";
 
@@ -52,5 +54,32 @@ describe("createAgent", () => {
 
 	it("throws on empty domain", async () => {
 		await expect(createAgent({ domain: "" })).rejects.toThrow();
+	});
+
+	it("throws AgentError when storage fails", async () => {
+		const failingStorage: StorageAdapter = {
+			get: async () => null,
+			set: async () => {
+				throw new Error("disk full");
+			},
+			delete: async () => {},
+			list: async () => [],
+		};
+
+		await expect(
+			createAgent({ domain: "agent.example.com", storage: failingStorage }),
+		).rejects.toThrow(AgentError);
+
+		try {
+			await createAgent({
+				domain: "agent.example.com",
+				storage: failingStorage,
+			});
+		} catch (err) {
+			expect(err).toBeInstanceOf(AgentError);
+			expect((err as AgentError).code).toBe(ErrorCodes.AGENT_CREATION_FAILED);
+			expect((err as AgentError).message).toContain("failed to persist");
+			expect((err as AgentError).message).toContain("disk full");
+		}
 	});
 });

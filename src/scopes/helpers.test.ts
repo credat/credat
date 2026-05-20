@@ -37,6 +37,10 @@ describe("hasAnyScope", () => {
 			false,
 		);
 	});
+
+	it("returns false for empty scopes array", () => {
+		expect(hasAnyScope(mockResult, [])).toBe(false);
+	});
 });
 
 describe("hasAllScopes", () => {
@@ -47,6 +51,10 @@ describe("hasAllScopes", () => {
 	it("returns false when some scopes missing", () => {
 		expect(hasAllScopes(mockResult, ["book:travel", "admin:all"])).toBe(false);
 	});
+
+	it("returns true for empty scopes array", () => {
+		expect(hasAllScopes(mockResult, [])).toBe(true);
+	});
 });
 
 describe("getAllScopes", () => {
@@ -56,6 +64,16 @@ describe("getAllScopes", () => {
 			"read:email",
 			"spend:usd",
 		]);
+	});
+
+	it("returns a copy, not a reference", () => {
+		const scopes = getAllScopes(mockResult);
+		scopes.push("admin:all");
+		expect(mockResult.scopes).toHaveLength(3);
+	});
+
+	it("returns empty array for empty scopes", () => {
+		expect(getAllScopes({ scopes: [] })).toEqual([]);
 	});
 });
 
@@ -164,5 +182,86 @@ describe("validateConstraints", () => {
 			{ transactionValue: 100 },
 		);
 		expect(violations).toEqual([]);
+	});
+
+	it("validates maxTransactionValue - zero value is within any positive limit", () => {
+		expect(
+			validateConstraints(
+				{ maxTransactionValue: 1000 },
+				{ transactionValue: 0 },
+			),
+		).toEqual([]);
+	});
+
+	it("validates maxTransactionValue - zero limit rejects positive value", () => {
+		const violations = validateConstraints(
+			{ maxTransactionValue: 0 },
+			{ transactionValue: 1 },
+		);
+		expect(violations).toHaveLength(1);
+		expect(violations[0]?.constraint).toBe("maxTransactionValue");
+	});
+
+	it("validates maxTransactionValue - zero limit allows zero value", () => {
+		expect(
+			validateConstraints(
+				{ maxTransactionValue: 0 },
+				{ transactionValue: 0 },
+			),
+		).toEqual([]);
+	});
+
+	it("validates maxTransactionValue - negative value is within limit", () => {
+		expect(
+			validateConstraints(
+				{ maxTransactionValue: 1000 },
+				{ transactionValue: -500 },
+			),
+		).toEqual([]);
+	});
+
+	it("skips maxTransactionValue when context.transactionValue is undefined", () => {
+		expect(
+			validateConstraints({ maxTransactionValue: 1000 }, {}),
+		).toEqual([]);
+	});
+
+	it("skips allowedDomains when context.domain is undefined", () => {
+		expect(
+			validateConstraints(
+				{ allowedDomains: ["example.com"] },
+				{ transactionValue: 100 },
+			),
+		).toEqual([]);
+	});
+
+	it("validates rateLimit - exact limit is valid", () => {
+		expect(
+			validateConstraints({ rateLimit: 100 }, { rateLimit: 100 }),
+		).toEqual([]);
+	});
+
+	it("skips rateLimit when context.rateLimit is not a number", () => {
+		expect(
+			validateConstraints(
+				{ rateLimit: 100 },
+				{ rateLimit: "fast" } as unknown as Record<string, unknown>,
+			),
+		).toEqual([]);
+	});
+
+	it("skips rateLimit when context.rateLimit is undefined", () => {
+		expect(
+			validateConstraints({ rateLimit: 100 }, {}),
+		).toEqual([]);
+	});
+
+	it("validates allowedDomains - empty list rejects any domain", () => {
+		const violations = validateConstraints(
+			{ allowedDomains: [] },
+			{ domain: "example.com" },
+		);
+		expect(violations).toHaveLength(1);
+		expect(violations[0]?.constraint).toBe("allowedDomains");
 	});
 });
