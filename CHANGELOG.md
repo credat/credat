@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.4.0-alpha.1](https://github.com/credat/credat/compare/v0.3.0-alpha.1...v0.4.0-alpha.1) (2026-05-20)
+
+
+### ⚠ BREAKING CHANGES
+
+* encodeStatusList, decodeStatusList, createStatusListCredential, and verifyStatusListCredential are now async (return Promises). This was necessary to use the Web Standard Compression Streams API which is async.
+
+### Features
+
+* add DIDCache for did:web resolution caching ([c96eb32](https://github.com/credat/credat/commit/c96eb3286567445d1502438576de7a37fde4c9a8)), closes [#18](https://github.com/credat/credat/issues/18)
+* add MCP server authentication example ([33f216d](https://github.com/credat/credat/commit/33f216dc8cf232c73204d81cea09e5a22255bd15)), closes [#19](https://github.com/credat/credat/issues/19)
+* add OpenAI Agents SDK integration example ([6ba2570](https://github.com/credat/credat/commit/6ba2570cd979977008390cc2235e89b2dfc6e833)), closes [#21](https://github.com/credat/credat/issues/21)
+* support browser and edge runtimes ([c8cddcc](https://github.com/credat/credat/commit/c8cddcc3fd575da89338c19efa68a52fd32abd3d)), closes [#20](https://github.com/credat/credat/issues/20)
+
+
+### Bug Fixes
+
+* add SECURITY.md and sync VERSION constant ([2a81e1b](https://github.com/credat/credat/commit/2a81e1b6268d110a302c14eb616a3f2809f4ceaf)), closes [#17](https://github.com/credat/credat/issues/17)
+
 ## [0.3.0-alpha.1](https://github.com/credat/credat/compare/v0.2.2-alpha.1...v0.3.0-alpha.1) (2026-03-19)
 
 
