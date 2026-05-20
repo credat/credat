@@ -54,6 +54,18 @@ jobs:
             echo "tag=latest" >> "$GITHUB_OUTPUT"
           fi
 
-      - run: npm publish --access public --tag ${{ steps.npm-tag.outputs.tag }}
+      - name: Check npm auth
+        id: npm-auth
+        continue-on-error: true
+        run: npm whoami
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - run: npm publish --access public --tag ${{ steps.npm-tag.outputs.tag }}
+        if: steps.npm-auth.outcome == 'success'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Notice on skipped publish
+        if: steps.npm-auth.outcome != 'success'
+        run: echo "::warning::Skipping npm publish — NPM_TOKEN is invalid or missing. Renew it at the credat org level."
