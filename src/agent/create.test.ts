@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { AgentError, ErrorCodes } from "../errors";
-import type { StorageAdapter } from "../types";
 import { MemoryStorage } from "../storage/memory";
+import type { StorageAdapter } from "../types";
 import { createAgent } from "./create";
 
 describe("createAgent", () => {

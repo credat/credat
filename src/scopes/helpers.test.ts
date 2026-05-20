@@ -204,10 +204,7 @@ describe("validateConstraints", () => {
 
 	it("validates maxTransactionValue - zero limit allows zero value", () => {
 		expect(
-			validateConstraints(
-				{ maxTransactionValue: 0 },
-				{ transactionValue: 0 },
-			),
+			validateConstraints({ maxTransactionValue: 0 }, { transactionValue: 0 }),
 		).toEqual([]);
 	});
 
@@ -221,9 +218,7 @@ describe("validateConstraints", () => {
 	});
 
 	it("skips maxTransactionValue when context.transactionValue is undefined", () => {
-		expect(
-			validateConstraints({ maxTransactionValue: 1000 }, {}),
-		).toEqual([]);
+		expect(validateConstraints({ maxTransactionValue: 1000 }, {})).toEqual([]);
 	});
 
 	it("skips allowedDomains when context.domain is undefined", () => {
@@ -236,24 +231,21 @@ describe("validateConstraints", () => {
 	});
 
 	it("validates rateLimit - exact limit is valid", () => {
-		expect(
-			validateConstraints({ rateLimit: 100 }, { rateLimit: 100 }),
-		).toEqual([]);
+		expect(validateConstraints({ rateLimit: 100 }, { rateLimit: 100 })).toEqual(
+			[],
+		);
 	});
 
 	it("skips rateLimit when context.rateLimit is not a number", () => {
 		expect(
-			validateConstraints(
-				{ rateLimit: 100 },
-				{ rateLimit: "fast" } as unknown as Record<string, unknown>,
-			),
+			validateConstraints({ rateLimit: 100 }, {
+				rateLimit: "fast",
+			} as unknown as Record<string, unknown>),
 		).toEqual([]);
 	});
 
 	it("skips rateLimit when context.rateLimit is undefined", () => {
-		expect(
-			validateConstraints({ rateLimit: 100 }, {}),
-		).toEqual([]);
+		expect(validateConstraints({ rateLimit: 100 }, {})).toEqual([]);
 	});
 
 	it("validates allowedDomains - empty list rejects any domain", () => {
