@@ -42,18 +42,6 @@ jobs:
 
       - run: npm run build
 
-      - name: Determine npm tag
-        id: npm-tag
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          if echo "$VERSION" | grep -q "alpha"; then
-            echo "tag=alpha" >> "$GITHUB_OUTPUT"
-          elif echo "$VERSION" | grep -q "beta"; then
-            echo "tag=beta" >> "$GITHUB_OUTPUT"
-          else
-            echo "tag=latest" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Check npm auth
         id: npm-auth
         continue-on-error: true
@@ -61,7 +49,7 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - run: npm publish --access public --tag ${{ steps.npm-tag.outputs.tag }}
+      - run: npm publish --access public
         if: steps.npm-auth.outcome == 'success'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
